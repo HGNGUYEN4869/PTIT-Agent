@@ -4,30 +4,19 @@ import { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "@/components/component/ChatMessage";
 import { ChatInput } from "@/components/component/ChatInput";
 import { Message } from "@/types/message";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { v4 as uuid } from "uuid";
 import { uploadRagFile } from "./api/uploadFile";
 import { ragQuery } from "./api/ragQuery";
 import { CheckCircle2Icon, X } from "lucide-react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [successUpload, setSuccessUpload] = useState<boolean>(false);
   const messageEndRef = useRef<HTMLDivElement>(null);
-  let images: string[] = [];
   
   function formatMarkdown(content: string): string {
-    console.log(content);
-    console.log(content.replace(
-      /\[IMAGE:\s*(.*?)\s*\]/g,
-      '<img src="$1" alt="image" style="max-width:100%;border-radius:8px;margin:8px 0;" />'
-    ));
-    console.log(content.replace(/\|[^\n]+\|\s*\n\s*\n(?=\|)/g, (m) => m.replace(/\n+/g, " ")))
-    console.log(content.replace(/\\n/g, "\n"))
-    console.log(content.replace(/\n{3,}/g, "\n\n"))
     
   return content
     // ✅ Chuyển [IMAGE: ...] thành thẻ <img>
