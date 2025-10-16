@@ -93,10 +93,10 @@ export default function Home() {
   }, [messages, loading]);
 
   return (
-    <div className=" relative flex flex-col h-full bg-[url('/frame-background.png')] bg-cover">
+    <div className="relative flex flex-col h-full overflow-y-scroll bg-transparent content-wrap">
       {messages.length === 0 && (
-        <div className="absolute text-2xl font-semibold text-center transform -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none top-1/2 left-1/2 text-muted-foreground z-3">
-          Xin chào 👋 Tôi là ChatGPT clone của bạn!
+        <div className="absolute text-2xl font-semibold text-center transform -translate-x-1/2 -translate-y-1/2 bg-transparent pointer-events-none select-none top-1/2 left-1/2 text-muted-foreground z-3">
+          Xin chào 👋 Tôi là PTIT Agent của bạn!
         </div>
       )}
       {successUpload && (
@@ -107,7 +107,7 @@ export default function Home() {
       )}
 
       {/* 👉 CHỈ phần này cuộn */}
-      <div className="flex-1 p-4 overflow-y-auto">
+      <div className="flex-1 pt-4 pb-40 overflow-y-auto px-72">
         <div className="flex flex-col w-full gap-4">
           {messages.map((m) => (
             <ChatMessage key={m.id} role={m.role} content={m.content} />
@@ -118,7 +118,7 @@ export default function Home() {
       </div>
 
       {/* 👇 Giữ cố định input ở đáy */}
-      <div className="absolute z-10 w-full p-4 mb-1 bg-transparent backdrop-blur-sm -bottom-0">
+      <div className="absolute z-10 w-full p-4 mb-1 bg-transparent -bottom-0 left-1/2 -translate-x-1/2 max-w-[900px]">
         <ChatInput onSend={handleSend} disabled={loading} />
       </div>
     </div>

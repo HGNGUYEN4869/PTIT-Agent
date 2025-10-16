@@ -47,7 +47,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
       {/* Nút upload file */}
       <div className="relative">
         <Button type="button" variant="outline" size="icon" disabled={disabled} className="p-2">
-          <Paperclip className="w-4 h-4" />
+          <Paperclip className="w-6 h-6" />
           <input
             type="file"
             className="absolute inset-0 h-full opacity-0 cursor-pointer"
@@ -59,7 +59,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 
       {/* Hiển thị tên file khi chọn */}
       {file && (
-        <div className="flex items-center h-full gap-2 px-2 text-sm border rounded-md text-muted-foreground bg-background">
+        <div className="flex items-center gap-2 px-2 py-1.5 text-sm border rounded-md text-muted-foreground bg-background">
           <span className="truncate max-w-[50px]">{file.name}</span>
           <button
             type="button"
@@ -78,7 +78,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         onChange={(e) => setInput(e.target.value)}
         disabled={disabled}
         // IMPORTANT: override padding/line-height mặc định component (dùng ! để chắc chắn)
-        className="flex-1 bg-background max-w-[800px] resize-none min-h-[36px] h-auto !p-2 !leading-[18px]"
+        className="flex-1 bg-background max-w-[800px] resize-none min-h-[36px] h-full !p-2 !leading-[18px]"
         onKeyDown={handleEnter}
         onInput={(e) => {
           const target = e.target as HTMLTextAreaElement;
@@ -92,7 +92,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
       />
 
       {/* Gửi */}
-      <Button type="submit" disabled={disabled || (!input.trim() && !file)}>
+      <Button type="submit" disabled={disabled || (!input.trim() && !file)} className="p-2">
         <Send className="w-6 h-6" />
       </Button>
     </form>
