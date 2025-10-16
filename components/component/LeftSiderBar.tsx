@@ -45,6 +45,7 @@ import {
   User2,
   ChevronDown,
 } from "lucide-react"; // hoặc từ icon bạn dùng
+import { useRouter } from "next/navigation";
 
 interface ChatThread {
   id: string;
@@ -55,6 +56,7 @@ interface ChatThread {
 export function AppSidebar() {
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   // fetch API khi mount
   useEffect(() => {
@@ -89,8 +91,7 @@ export function AppSidebar() {
   };
 
   const handleNewChat = () => {
-    // thêm thread mới
-    console.log("new chat");
+    router.push("/"); // chuyển về trang chính để tạo đoạn chat mới
   };
 
   return (
@@ -130,7 +131,7 @@ export function AppSidebar() {
             </SidebarMenuItem>
 
             <CollapsibleContent>
-              <SidebarMenu className="mt-1 ml-2 space-y-1">
+              <SidebarMenu className="mt-1 space-y-1">
                 {loading ? (
                   <SidebarMenuItem key="loading">
                     <SidebarMenuButton asChild>
@@ -180,7 +181,7 @@ export function AppSidebar() {
           </Collapsible>
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="border-t">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>

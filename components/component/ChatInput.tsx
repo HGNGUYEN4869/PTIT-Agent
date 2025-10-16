@@ -13,6 +13,8 @@ interface ChatInputProps {
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [history, setHistory] = useState<string[]>([]); // lịch sử nhập
+  const [index, setIndex] = useState<number | null>(null); // chỉ số history đang chọn
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -33,16 +35,33 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
       e.preventDefault(); // chặn xuống dòng
       if (input.trim() || file) {
         onSend(input, file || undefined);
+        setHistory(prev => [...prev, input]); // lưu vào history
         setInput("");
         setFile(null);
+        setIndex(null); // reset chỉ số history
       }
+    }else if (e.key === "ArrowUp") {
+      // Lấy giá trị trước đó
+      setIndex(prev => {
+        const newIndex = prev === null ? history.length - 1 : Math.max(prev - 1, 0);
+        if (newIndex >= 0) setInput(history[newIndex]);
+        return newIndex;
+      });
+    } else if (e.key === "ArrowDown") {
+      // Lấy giá trị tiếp theo
+      setIndex(prev => {
+        if (prev === null) return null;
+        const newIndex = Math.min(prev + 1, history.length - 1);
+        setInput(history[newIndex]);
+        return newIndex;
+      });
     }
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex items-end justify-center gap-2 p-4 bg-transparent"
+      className="flex items-end justify-center gap-2 p-4 bg-transparent pl-0"
     >
       {/* Nút upload file */}
       <div className="relative">
@@ -78,7 +97,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         onChange={(e) => setInput(e.target.value)}
         disabled={disabled}
         // IMPORTANT: override padding/line-height mặc định component (dùng ! để chắc chắn)
-        className="flex-1 bg-background max-w-[800px] resize-none min-h-[36px] h-full !p-2 !leading-[18px]"
+        className="flex-1 bg-background resize-none min-h-[36px] h-full !p-2 !leading-[18px]"
         onKeyDown={handleEnter}
         onInput={(e) => {
           const target = e.target as HTMLTextAreaElement;
@@ -92,7 +111,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
       />
 
       {/* Gửi */}
-      <Button type="submit" disabled={disabled || (!input.trim() && !file)} className="p-2">
+      <Button type="submit" disabled={disabled || (!input.trim() && !file)} className="p-2 bg-primary">
         <Send className="w-6 h-6" />
       </Button>
     </form>

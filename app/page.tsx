@@ -9,26 +9,30 @@ import { uploadRagFile } from "./api/uploadFile";
 import { ragQuery } from "./api/ragQuery";
 import { CheckCircle2Icon, X } from "lucide-react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [successUpload, setSuccessUpload] = useState<boolean>(false);
   const messageEndRef = useRef<HTMLDivElement>(null);
-  
+  const router = useRouter();
+
   function formatMarkdown(content: string): string {
-    
-  return content
-    // ✅ Chuyển [IMAGE: ...] thành thẻ <img>
-    .replace(
-      /\[IMAGE:\s*(.*?)\s*\]/g,
-      '<img src="$1" alt="image" style="max-width:100%;border-radius:8px;margin:8px 0;" />'
-    )
-    .replace(/\|[^\n]+\|\s*\n\s*\n(?=\|)/g, (m) => m.replace(/\n+/g, " "))
-    // ✅ Chuẩn hóa các dòng xuống dòng
-    .replace(/\\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n");
-}
+    return (
+      content
+        // ✅ Chuyển [IMAGE: ...] thành thẻ <img>
+        .replace(
+          /\[IMAGE:\s*(.*?)\s*\]/g,
+          '<img src="$1" alt="image" style="max-width:100%;border-radius:8px;margin:8px 0;" />'
+        )
+        .replace(/\|[^\n]+\|\s*\n\s*\n(?=\|)/g, (m) => m.replace(/\n+/g, " "))
+        // ✅ Chuẩn hóa các dòng xuống dòng
+        .replace(/\\n/g, "\n")
+        .replace(/\n{3,}/g, "\n")
+        .replace(/\n\n+/g, "\n")
+    );
+  }
 
   const handleSend = async (text: string, file?: File) => {
     const userMsg: Message = { id: uuid(), role: "user", content: text };
@@ -68,9 +72,10 @@ export default function Home() {
       const botMsg: Message = {
         id: uuid(),
         role: "assistant",
-        content: formatMarkdown(queryRes.data.answer) ?? "Không có phản hồi từ server 🤖",
+        content:
+          formatMarkdown(queryRes.data.answer) ??
+          "Không có phản hồi từ server 🤖",
       };
-
 
       setMessages((prev) => [...prev, botMsg]);
     } catch (error) {
@@ -99,26 +104,28 @@ export default function Home() {
           Xin chào 👋 Tôi là PTIT Agent của bạn!
         </div>
       )}
-      {successUpload && (
-        <Alert>
-          <CheckCircle2Icon />
-          <AlertTitle>File upload thành công</AlertTitle>
-        </Alert>
-      )}
 
       {/* 👉 CHỈ phần này cuộn */}
-      <div className="flex-1 pt-4 pb-40 overflow-y-auto px-72">
+      <div className="flex-1 pt-4 pb-40 px-72 overflow-y-auto">
+        {successUpload && (
+          <div className="absolute top-0 right-0">
+            <Alert>
+              <CheckCircle2Icon />
+              <AlertTitle>File upload thành công</AlertTitle>
+            </Alert>
+          </div>
+        )}
         <div className="flex flex-col w-full gap-4">
           {messages.map((m) => (
             <ChatMessage key={m.id} role={m.role} content={m.content} />
           ))}
-          {loading && <ChatMessage role="assistant" content="Đang nhập..." />}
+          {loading && <ChatMessage role="assistant" content="Đang suy nghĩ" />}
           <div ref={messageEndRef} />
         </div>
       </div>
 
       {/* 👇 Giữ cố định input ở đáy */}
-      <div className="absolute z-10 w-full p-4 mb-1 bg-transparent -bottom-0 left-1/2 -translate-x-1/2 max-w-[900px]">
+      <div className="absolute z-10 w-full py-4 mb-1 bg-transparent -bottom-0 left-1/2 -translate-x-1/2 px-72">
         <ChatInput onSend={handleSend} disabled={loading} />
       </div>
     </div>
