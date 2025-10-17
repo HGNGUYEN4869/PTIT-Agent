@@ -4,6 +4,7 @@ import "./globals.css";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { X } from "lucide-react";
 import { AppSidebar } from "@/components/component/LeftSiderBar";
+import { Providers } from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,8 +31,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SidebarProvider defaultOpen>
-          <AppSidebar />
+        <Providers>
+          <SidebarProvider defaultOpen>
+            <AppSidebar />
             <div className="flex flex-col w-full h-screen bg-[url('/frame-background.png')] bg-cover">
               <div className="p-4 text-lg font-semibold border-b">
                 <SidebarTrigger>
@@ -39,9 +41,12 @@ export default function RootLayout({
                 </SidebarTrigger>
                 <span className="ml-2">PTIT Agent</span>
               </div>
-              <div className="flex-1 overflow-y-auto content-wrap">{children}</div>
+              <div className="flex-1 overflow-y-auto content-wrap">
+                {children}
+              </div>
             </div>
-        </SidebarProvider>
+          </SidebarProvider>
+        </Providers>
       </body>
     </html>
   );

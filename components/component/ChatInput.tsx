@@ -12,7 +12,7 @@ interface ChatInputProps {
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [input, setInput] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | undefined>(null);
   const [history, setHistory] = useState<string[]>([]); // lịch sử nhập
   const [index, setIndex] = useState<number | null>(null); // chỉ số history đang chọn
 
@@ -35,21 +35,22 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
       e.preventDefault(); // chặn xuống dòng
       if (input.trim() || file) {
         onSend(input, file || undefined);
-        setHistory(prev => [...prev, input]); // lưu vào history
+        setHistory((prev) => [...prev, input]); // lưu vào history
         setInput("");
         setFile(null);
         setIndex(null); // reset chỉ số history
       }
-    }else if (e.key === "ArrowUp") {
+    } else if (e.key === "ArrowUp") {
       // Lấy giá trị trước đó
-      setIndex(prev => {
-        const newIndex = prev === null ? history.length - 1 : Math.max(prev - 1, 0);
+      setIndex((prev) => {
+        const newIndex =
+          prev === null ? history.length - 1 : Math.max(prev - 1, 0);
         if (newIndex >= 0) setInput(history[newIndex]);
         return newIndex;
       });
     } else if (e.key === "ArrowDown") {
       // Lấy giá trị tiếp theo
-      setIndex(prev => {
+      setIndex((prev) => {
         if (prev === null) return null;
         const newIndex = Math.min(prev + 1, history.length - 1);
         setInput(history[newIndex]);
@@ -65,7 +66,13 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     >
       {/* Nút upload file */}
       <div className="relative">
-        <Button type="button" variant="outline" size="icon" disabled={disabled} className="p-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          disabled={disabled}
+          className="p-2"
+        >
           <Paperclip className="w-6 h-6" />
           <input
             type="file"
@@ -111,7 +118,11 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
       />
 
       {/* Gửi */}
-      <Button type="submit" disabled={disabled || (!input.trim() && !file)} className="p-2 bg-primary">
+      <Button
+        type="submit"
+        disabled={disabled || (!input.trim() && !file)}
+        className="p-2 bg-primary"
+      >
         <Send className="w-6 h-6" />
       </Button>
     </form>

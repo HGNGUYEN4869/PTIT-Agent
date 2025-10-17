@@ -1,18 +1,3 @@
-// import { PanelRightOpen } from "lucide-react"
-
-// export function LeftSidebar() {
-//   return (
-//     <aside className="flex-col w-full h-full p-4 overflow-y-hidden border-r md:flex bg-muted/40">
-//       <div className="mb-4 font-semibold">Menu</div>
-//       <ul className="space-y-2 text-sm">
-//         <PanelRightOpen strokeWidth={1} />
-//         <li className="cursor-pointer hover:text-primary">Đoạn chat mới</li>
-//         <li className="cursor-pointer hover:text-primary">History</li>
-//         <li className="cursor-pointer hover:text-primary">Settings</li>
-//       </ul>
-//     </aside>
-//   )
-// }
 "use client";
 
 import React, { useEffect, useState } from "react";
