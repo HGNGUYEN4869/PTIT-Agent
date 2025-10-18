@@ -11,3 +11,7 @@ export enum MessageRole {
 export interface MessageResponse extends Message {
   createdAt: string
 }
+
+export type AddMessageResponse =
+  | undefined // khi thành công (200 OK, no body)
+  | { error: string };

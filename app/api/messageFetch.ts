@@ -1,12 +1,12 @@
 import { db } from "@/lib/axios";
-import { Message } from "@/types/message";
+import { AddMessageResponse, Message } from "@/types/message";
 import { UUID } from "crypto";
 
 export const addMessage = async (
   Message: Message,
   idChat: UUID,
-): Promise<any> => {
-  const response = await db.post<any>(
+): Promise<AddMessageResponse> => {
+  const response = await db.post<AddMessageResponse>(
     `/h/chats/${idChat}/messages`,
     Message,
     {
