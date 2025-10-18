@@ -12,7 +12,7 @@ interface ChatInputProps {
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [input, setInput] = useState("");
-  const [file, setFile] = useState<File | undefined>(null);
+  const [file, setFile] = useState<File | undefined>(undefined);
   const [history, setHistory] = useState<string[]>([]); // lịch sử nhập
   const [index, setIndex] = useState<number | null>(null); // chỉ số history đang chọn
 
@@ -28,7 +28,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     if (!input.trim() && !file) return;
     onSend(input, file || undefined);
     setInput("");
-    setFile(null);
+    setFile(undefined);
   };
   const handleEnter = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -37,7 +37,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         onSend(input, file || undefined);
         setHistory((prev) => [...prev, input]); // lưu vào history
         setInput("");
-        setFile(null);
+        setFile(undefined);
         setIndex(null); // reset chỉ số history
       }
     } else if (e.key === "ArrowUp") {
@@ -89,7 +89,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           <span className="truncate max-w-[50px]">{file.name}</span>
           <button
             type="button"
-            onClick={() => setFile(null)}
+            onClick={() => setFile(undefined)}
             className="hover:text-destructive"
           >
             <X className="w-6 h-6" />

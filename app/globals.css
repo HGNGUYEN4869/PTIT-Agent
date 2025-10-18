@@ -133,3 +133,16 @@ textarea::-webkit-scrollbar {
 .content-wrap::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Edge */
 }
+
+.prose h1, .prose h2, .prose h3 {
+  margin: 0.5em 0;
+}
+.prose p{
+  margin: 0.25em 0;
+}
+.prose ul, .prose ol {
+  margin: 0.25em 0 0.25em 1.5em;
+}
+.prose th {
+  margin-top: 0.5em;
+}

@@ -1,12 +1,14 @@
 "use client";
 
 import { useDispatch, useSelector } from "react-redux";
-import { setInput, setFile } from "../store/chatSlice";
-import { RootState } from "../store/store";
+import { setInput, setFile } from "../../store/chatSlice";
+import { RootState } from "../../store/store";
 import { ChatInput } from "@/components/component/ChatInput";
 import { useRouter } from "next/navigation";
-import { createChat } from "./api/chatFetch";
+import { createChat } from "../api/chatFetch";
+import { v4 as uuid } from "uuid";
 import { useState } from "react";
+import { CreateChatRequest } from "@/types/chat";
 
 export default function Home() {
   const dispatch = useDispatch();
@@ -17,20 +19,26 @@ export default function Home() {
   const handleStartChat = async (input: string, file?: File | undefined) => {
     if (!input.trim() && !file) return;
     dispatch(setInput(input.trim()));
-    dispatch(setFile(file as File));
-    input = "";
-    file = undefined
+    if (file) {
+      dispatch(setFile(file as File));
+    }
     setLoading(true);
     try {
-      // if (sessionStorage.getItem("idUser")) {
-      //   const thread = await createChat("1" /* giả sử user id là 1 */);
-      //   router.push(`/${thread.id}`);
-      // } else {
-      router.push("/akldsfghjjklfghksdfgh"); // id tạm thời cho user chưa đăng nhập
-      // }
+      const createChatRequest: CreateChatRequest = {
+        title: input.trim() || "New Chat",
+      };
+      const response = await createChat(createChatRequest);
+      if (response.idChat) {
+        // Chuyển hướng đến trang chat với chatId mới
+        router.push(`/${response.idChat}`);
+      } else {
+        console.error("Failed to create chat: no chatId returned");
+      }
     } catch (err) {
       console.error(err);
     } finally {
+      input = "";
+      file = undefined;
       setLoading(false);
     }
   };
