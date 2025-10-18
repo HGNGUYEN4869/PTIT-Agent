@@ -5,16 +5,18 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import rehypeSanitize from "rehype-sanitize";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { motion } from "framer-motion";
+import { MessageRole } from "@/types/message";
 
 interface ChatMessageProps {
-  role: "user" | "assistant";
+  role: MessageRole;
   content: string;
 }
 
 export function ChatMessage({ role, content }: ChatMessageProps) {
-  const isUser = role === "user";
+  const isUser = role === MessageRole.USER;
 
   return (
     <motion.div
@@ -51,7 +53,7 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
             : "bg-muted rounded-bl-none w-full"
         )}
       >
-        <CardContent className="p-0 whitespace-pre-line prose max-w-none prose-table:my-2 prose-p:my-2 prose-h2:my-2">
+        <CardContent className="p-0 prose max-w-none">
           {content === "Đang suy nghĩ" ? (
             <div className="flex items-center">
               <span>Đang suy nghĩ </span>
@@ -62,8 +64,8 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
                   animate={{ opacity: [0, 1, 0] }}
                   transition={{
                     repeat: Infinity,
-                    duration: 1.5,
-                    delay: i * 0.3, // mỗi chấm trễ thêm 0.3s
+                    duration: 1.2,
+                    delay: i * 0.25, // mỗi chấm trễ thêm 0.3s
                     ease: "easeInOut",
                   }}
                 >
@@ -74,7 +76,7 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
           ) : (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw]}
+              rehypePlugins={[rehypeRaw, rehypeSanitize]}
               components={{
                 // ✅ Hiển thị code block có highlight
                 code({
@@ -98,6 +100,7 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
                         borderRadius: "0.5rem",
                         fontSize: "0.85rem",
                         innerWidth: "100%",
+                        overflowX: "auto", 
                       }}
                     >
                       {String(children).replace(/\n$/, "")}

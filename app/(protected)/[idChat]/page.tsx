@@ -3,16 +3,18 @@
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "@/components/component/ChatMessage";
 import { ChatInput } from "@/components/component/ChatInput";
-import { Message } from "@/types/message";
+import { Message, MessageRole } from "@/types/message";
 import { v4 as uuid } from "uuid";
-import { uploadRagFile } from "../api/uploadFile";
-import { ragQuery } from "../api/ragQuery";
+import { uploadRagFile } from "../../api/uploadFile";
+import { ragQuery } from "../../api/ragQuery";
 import { CheckCircle2Icon, X } from "lucide-react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "../../store/store";
-import { clearChatState } from "../../store/chatSlice";
+import { RootState } from "../../../store/store";
+import { clearChatState } from "../../../store/chatSlice";
+import { addMessage } from "../../api/messageFetch";
+import { UUID } from "crypto";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -22,6 +24,7 @@ export default function ChatPage() {
   const sentFromRedux = useRef(false);
   const [successUpload, setSuccessUpload] = useState<boolean>(false);
   const messageEndRef = useRef<HTMLDivElement>(null);
+  const params = useParams(); //{ idChat : 'abc123' }
 
   function formatMarkdown(content: string): string {
     return (
@@ -35,25 +38,17 @@ export default function ChatPage() {
         // ✅ Chuẩn hóa các dòng xuống dòng
         .replace(/\\n/g, "\n")
         .replace(/\n{3,}/g, "\n")
-        .replace(/\n\n+/g, "\n")
+        .trim()
     );
   }
 
   const handleSend = async (text: string, file?: File | undefined) => {
-    const userMsg: Message = { idMessage: uuid(), role: "user", content: text };
+    const userMsg: Message = {
+      role: MessageRole.USER,
+      content: text,
+    };
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
-
-    // Giả lập phản hồi từ bot (kết nối API thật ở đây)
-    // const res = await uploadRagFile()
-    // const botMsg: Message = {
-    //     idMessage uuid(),
-    //     role: "assistant",
-    //     content: `Bạn vừa nói: "${text}"`,
-    //   }
-    //   setMessages((prev) => [...prev, botMsg])
-    //   setLoading(false)
-
     try {
       let fileId: string | undefined;
 
@@ -71,16 +66,19 @@ export default function ChatPage() {
         text = "Đọc file " + (fileId ? `${fileId}` : "tôi gửi");
         text += " giúp tôi và tóm tắt nội dung chính.";
       }
-
       // Sau đó query
       const queryRes = await ragQuery(text);
       const botMsg: Message = {
-        idMessage: uuid(),
-        role: "assistant",
+        role: MessageRole.ASSISTANT,
         content:
           formatMarkdown(queryRes.data.answer) ??
           "Không có phản hồi từ server 🤖",
       };
+      if (queryRes.data.answer) {
+        // Tạo message trên db
+        await addMessage(userMsg, params.idChat as UUID);
+        await addMessage(botMsg, params.idChat as UUID);
+      }
 
       setMessages((prev) => [...prev, botMsg]);
     } catch (error) {
@@ -88,8 +86,7 @@ export default function ChatPage() {
       setMessages((prev) => [
         ...prev,
         {
-          idMessage: uuid(),
-          role: "assistant",
+          role: MessageRole.ASSISTANT,
           content: "⚠️ Có lỗi xảy ra khi gửi tin hoặc upload file.",
         },
       ]);
@@ -131,9 +128,11 @@ export default function ChatPage() {
         )}
         <div className="flex flex-col w-full gap-4">
           {messages.map((m) => (
-            <ChatMessage key={m.idMessage} role={m.role} content={m.content} />
+            <ChatMessage key={uuid()} role={m.role} content={m.content} />
           ))}
-          {loading && <ChatMessage role="assistant" content="Đang suy nghĩ" />}
+          {loading && (
+            <ChatMessage role={MessageRole.ASSISTANT} content="Đang suy nghĩ" />
+          )}
           <div ref={messageEndRef} />
         </div>
       </div>

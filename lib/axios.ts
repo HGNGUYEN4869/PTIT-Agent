@@ -10,9 +10,10 @@ export const api = axios.create({
 });
 export const db = axios.create({
   // baseURL: "http://172.16.6.91:2009",
-  baseURL: "http://172.16.5.10:2004",
+  baseURL: "http://localhost:8080/",
   headers: {
     accept: "application/json",
     "Content-Type": "application/json",
   },
+  withCredentials: true, // Gửi cookies để server xóa
 });
