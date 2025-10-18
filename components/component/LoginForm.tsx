@@ -164,7 +164,7 @@ export default function LoginForm() {
             href="/register"
             className="mt-6 text-sm text-center text-white hover:scale-105 duration-300 ease-in-out block"
           >
-            Don't have an account? Sign up now
+            Dont have an account? Sign up now
           </Link>
         </CardContent>
       </Card>
