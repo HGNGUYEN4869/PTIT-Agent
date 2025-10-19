@@ -65,21 +65,6 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
 };
 
 /**
- * Refresh access token
- * Dùng refreshToken cookie để lấy accessToken mới
- */
-export const refreshToken = async (): Promise<AuthResponse> => {
-  const response = await db.post<AuthResponse>(
-    "/agent/auth/refresh",
-    {},
-    {
-      withCredentials: true, // Tự động gửi refreshToken cookie
-    }
-  );
-  return response.data;
-};
-
-/**
  * Đăng xuất
  * Xóa cookies (accessToken, refreshToken)
  */
@@ -103,8 +88,8 @@ export const logout = async (
 export const checkAuth = async (): Promise<CheckAuthResponse> => {
   try {
     // Gọi API protected để verify token
-    // Backend cần có endpoint GET /h/chats/user (lấy danh sách chat của user)
-    const response = await db.get("/h/chats/user", {
+    // Backend cần có endpoint GET /me (lấy thông tin user hiện tại)
+    const response = await db.get("/agent/auth/me", {
       withCredentials: true,
     });
 
@@ -118,8 +103,8 @@ export const checkAuth = async (): Promise<CheckAuthResponse> => {
     // Giả sử backend trả về userId và username trong response
     return {
       isAuthenticated: true,
-      userId: response.data.idUser,
-      username: response.data.userName,
+      userId: response.data.userId,
+      username: response.data.username,
       email: response.data.email,
     };
   } catch (error) {

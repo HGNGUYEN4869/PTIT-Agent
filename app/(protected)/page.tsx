@@ -1,7 +1,11 @@
 "use client";
 
 import { useDispatch, useSelector } from "react-redux";
-import { setInput, setFile } from "../../store/chatSlice";
+import {
+  setInput,
+  setFile,
+  triggerRefreshHistory,
+} from "../../store/chatSlice";
 import { RootState } from "../../store/store";
 import { ChatInput } from "@/components/component/ChatInput";
 import { useRouter } from "next/navigation";
@@ -18,7 +22,9 @@ export default function Home() {
 
   const handleStartChat = async (input: string, file?: File | undefined) => {
     if (!input.trim() && !file) return;
-    dispatch(setInput(input.trim()));
+    if (input.trim()) {
+      dispatch(setInput(input.trim()));
+    }
     if (file) {
       dispatch(setFile(file as File));
     }

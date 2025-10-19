@@ -4,12 +4,9 @@ import { Message } from "./message"
 export interface Chat {
   idChat: string
   title: string
-  messages: Message[]
 }
 
-export interface HistoryChat{
-  historyChat: Chat[]
-}
+export type HistoryChat = Chat[];
 
 export interface CreateChatRequest {
   title: string;
