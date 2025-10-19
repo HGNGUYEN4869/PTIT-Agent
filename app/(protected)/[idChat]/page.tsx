@@ -12,9 +12,11 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../../store/store";
-import { clearChatState } from "../../../store/chatSlice";
+import { clearChatState, triggerRefreshHistory } from "../../../store/chatSlice";
 import { addMessage } from "../../api/messageFetch";
 import { UUID } from "crypto";
+import { getDetailChat } from "@/app/api/chatFetch";
+import { ChatResponse } from "@/types/chat";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -22,6 +24,7 @@ export default function ChatPage() {
   const chat = useSelector((state: RootState) => state.chat);
   const dispatch = useDispatch();
   const sentFromRedux = useRef(false);
+  const sendFirst = useRef<boolean>(true);
   const [successUpload, setSuccessUpload] = useState<boolean>(false);
   const messageEndRef = useRef<HTMLDivElement>(null);
   const params = useParams(); //{ idChat : 'abc123' }
@@ -43,6 +46,7 @@ export default function ChatPage() {
   }
 
   const handleSend = async (text: string, file?: File | undefined) => {
+
     const userMsg: Message = {
       role: MessageRole.USER,
       content: text,
@@ -78,6 +82,12 @@ export default function ChatPage() {
         // Tạo message trên db
         await addMessage(userMsg, params.idChat as UUID);
         await addMessage(botMsg, params.idChat as UUID);
+
+        if (sendFirst.current) {
+          // ✅ Trigger refresh history sidebar
+          dispatch(triggerRefreshHistory());
+          sendFirst.current = false;
+        }
       }
 
       setMessages((prev) => [...prev, botMsg]);
@@ -96,8 +106,20 @@ export default function ChatPage() {
   };
 
   useEffect(() => {
-    // nếu có input hoặc file từ redux => gửi ngay
-    if ((chat.input || chat.file) && !sentFromRedux.current) {
+    //nếu không có input đầu vào
+    if (!chat.input && !chat.file ) {
+      // 1️⃣ Không có input/file => fetch lấy chi tiết chat cũ
+      const fetchDetailHistoryChat = async () => {
+        try {
+          const data: ChatResponse = await getDetailChat(params.idChat as string);
+          setMessages(data.messages);
+        } catch (err) {
+          console.error(err);
+        }
+      };
+      fetchDetailHistoryChat();
+    } else if ((chat.input || chat.file) && !sentFromRedux.current) {
+      // nếu có input hoặc file từ redux => gửi ngay
       handleSend(chat.input, chat.file);
       dispatch(clearChatState());
       sentFromRedux.current = true;

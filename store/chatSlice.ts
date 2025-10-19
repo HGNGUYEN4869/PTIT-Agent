@@ -3,11 +3,13 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 interface ChatState {
   input: string;
   file?: File | undefined;
+  refreshHistory: number; // Trigger để refresh history
 }
 
 const initialState: ChatState = {
   input: "",
   file: undefined,
+  refreshHistory: 0,
 };
 
 const chatSlice = createSlice({
@@ -24,8 +26,13 @@ const chatSlice = createSlice({
       state.input = "";
       state.file = undefined;
     },
+    // Trigger refresh history sidebar
+    triggerRefreshHistory(state) {
+      state.refreshHistory += 1;
+    },
   },
 });
 
-export const { setInput, setFile, clearChatState } = chatSlice.actions;
+export const { setInput, setFile, clearChatState, triggerRefreshHistory } =
+  chatSlice.actions;
 export default chatSlice.reducer;

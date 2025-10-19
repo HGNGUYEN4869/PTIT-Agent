@@ -1,4 +1,5 @@
 export interface Message {
+  idMessage?: string
   role: MessageRole
   content: string
 }

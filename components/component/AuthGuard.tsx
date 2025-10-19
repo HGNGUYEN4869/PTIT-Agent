@@ -34,7 +34,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
         const result = await checkAuth();
 
         if (
-          result.isAuthenticated &&
           result.userId &&
           result.username &&
           result.email
