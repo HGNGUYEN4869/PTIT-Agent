@@ -16,12 +16,13 @@ import {
 import { Edit3, MoreHorizontal, Trash2 } from "lucide-react";
 import { Chat, HistoryChat } from "@/types/chat";
 import { getHistoryChat } from "@/app/api/chatFetch";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 const HistoryChatMenu = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [threads, setThreads] = useState<HistoryChat>([]);
   const router = useRouter();
+  const params = useParams();
   
   // Listen Redux state để refresh khi có thay đổi
   const { refreshHistory } = useSelector((state: RootState) => state.chat);
@@ -55,7 +56,7 @@ const HistoryChatMenu = () => {
   // Fetch khi component mount hoặc khi refreshHistory thay đổi
   useEffect(() => {
     fetchHistoryChats();
-  }, [refreshHistory]); // ✅ Thêm dependency
+  }, [refreshHistory]); 
 
   return (
     <>
@@ -71,7 +72,7 @@ const HistoryChatMenu = () => {
             <SidebarMenuItem key={thread.idChat}>
               <div className="flex items-center justify-between w-full">
                 <SidebarMenuButton asChild className="!pr-2">
-                  <button className="flex items-center w-full py-1 rounded-md hover:bg-accent hover:text-accent-foreground"
+                  <button className={`flex items-center w-full py-1 rounded-md hover:bg-accent hover:text-accent-foreground ${params.idChat === thread.idChat ? "bg-accent text-accent-foreground" : ""}`}
                   onClick={() => handleRouteToChat(thread.idChat)}
                   >
                     <span className="truncate">{thread.title}</span>
