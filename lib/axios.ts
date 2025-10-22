@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 
 export const api = axios.create({
   // baseURL: "http://172.16.6.91:2009",
@@ -21,10 +21,10 @@ export const db = axios.create({
 let isRefreshing = false;
 let failedQueue: {
   resolve: (value?: unknown) => void;
-  reject: (reason?: any) => void;
+  reject: (reason?: unknown) => void;
 }[] = [];
 
-const processQueue = (error: any) => {
+const processQueue = (error?: AxiosError | null) => {
   failedQueue.forEach((prom) => {
     if (error) prom.reject(error);
     else prom.resolve();
@@ -34,10 +34,12 @@ const processQueue = (error: any) => {
 
 // ---- Axios interceptor ----
 db.interceptors.response.use(
-  (response) => response,
+  (response: AxiosResponse): AxiosResponse => response,
 
-  async (error) => {
-    const originalRequest = error.config;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
 
     // 1️⃣ Không có response (VD: server chết, CORS lỗi, mạng rớt)
     if (!error.response) {
@@ -50,7 +52,7 @@ db.interceptors.response.use(
     if (
       status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url.includes("/agent/auth/me")
+      !originalRequest.url?.includes("/agent/auth/me")
     ) {
       if (isRefreshing) {
         // Nếu đang refresh, thêm request vào hàng đợi
@@ -88,7 +90,7 @@ db.interceptors.response.use(
     }
 
     // 6️⃣ Nếu chính /agent/auth/me bị 401 → không làm gì thêm (tránh loop)
-    if (status === 401 && originalRequest.url.includes("/agent/auth/me")) {
+    if (status === 401 && originalRequest.url?.includes("/agent/auth/me")) {
       console.warn("Auth endpoint 401 - forcing logout...");
       window.location.href = "/login";
     }
