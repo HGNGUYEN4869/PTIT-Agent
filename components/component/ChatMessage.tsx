@@ -16,7 +16,7 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({ role, content }: ChatMessageProps) {
-  const isUser = role === MessageRole.USER;
+  const isUser = role === MessageRole.USER;  
 
   return (
     <motion.div
