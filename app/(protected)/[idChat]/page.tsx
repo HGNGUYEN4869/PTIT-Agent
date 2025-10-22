@@ -9,10 +9,13 @@ import { uploadRagFile } from "../../api/uploadFile";
 import { ragQuery } from "../../api/ragQuery";
 import { CheckCircle2Icon, X } from "lucide-react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../../store/store";
-import { clearChatState, triggerRefreshHistory } from "../../../store/chatSlice";
+import {
+  clearChatState,
+  triggerRefreshHistory,
+} from "../../../store/chatSlice";
 import { addMessage } from "../../api/messageFetch";
 import { UUID } from "crypto";
 import { getDetailChat } from "@/app/api/chatFetch";
@@ -46,11 +49,11 @@ export default function ChatPage() {
   }
 
   const handleSend = async (text: string, file?: File | undefined) => {
-
     const userMsg: Message = {
       role: MessageRole.USER,
       content: text,
     };
+    await addMessage(userMsg, params.idChat as UUID);
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
     try {
@@ -80,7 +83,6 @@ export default function ChatPage() {
       };
       if (queryRes.data.answer) {
         // Tạo message trên db
-        await addMessage(userMsg, params.idChat as UUID);
         await addMessage(botMsg, params.idChat as UUID);
 
         if (sendFirst.current) {
@@ -107,11 +109,13 @@ export default function ChatPage() {
 
   useEffect(() => {
     //nếu không có input đầu vào
-    if (!chat.input && !chat.file ) {
+    if (!chat.input && !chat.file) {
       // 1️⃣ Không có input/file => fetch lấy chi tiết chat cũ
       const fetchDetailHistoryChat = async () => {
         try {
-          const data: ChatResponse = await getDetailChat(params.idChat as string);
+          const data: ChatResponse = await getDetailChat(
+            params.idChat as string
+          );
           setMessages(data.messages);
         } catch (err) {
           console.error(err);
@@ -149,8 +153,12 @@ export default function ChatPage() {
           </div>
         )}
         <div className="flex flex-col w-full gap-4">
-          {messages.map((m) => (
-            <ChatMessage key={uuid()} role={m.role} content={m.content} />
+          {messages.map((m, index) => (
+            <ChatMessage
+              key={`${index}-${m.content.substring(0, 30)}`}
+              role={m.role}
+              content={m.content}
+            />
           ))}
           {loading && (
             <ChatMessage role={MessageRole.ASSISTANT} content="Đang suy nghĩ" />
