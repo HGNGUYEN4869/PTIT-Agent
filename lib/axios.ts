@@ -1,4 +1,10 @@
-import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+
+import axios from "axios";
 
 export const api = axios.create({
   // baseURL: "http://172.16.6.91:2009",
@@ -21,10 +27,10 @@ export const db = axios.create({
 let isRefreshing = false;
 let failedQueue: {
   resolve: (value?: unknown) => void;
-  reject: (reason?: unknown) => void;
+  reject: (reason?: any) => void;
 }[] = [];
 
-const processQueue = (error?: AxiosError | null) => {
+const processQueue = (error: any) => {
   failedQueue.forEach((prom) => {
     if (error) prom.reject(error);
     else prom.resolve();
@@ -34,12 +40,10 @@ const processQueue = (error?: AxiosError | null) => {
 
 // ---- Axios interceptor ----
 db.interceptors.response.use(
-  (response: AxiosResponse): AxiosResponse => response,
+  (response) => response,
 
-  async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean;
-    };
+  async (error) => {
+    const originalRequest = error.config;
 
     // 1️⃣ Không có response (VD: server chết, CORS lỗi, mạng rớt)
     if (!error.response) {
@@ -52,7 +56,7 @@ db.interceptors.response.use(
     if (
       status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes("/agent/auth/me")
+      !originalRequest.url.includes("/agent/auth/me")
     ) {
       if (isRefreshing) {
         // Nếu đang refresh, thêm request vào hàng đợi
@@ -75,8 +79,7 @@ db.interceptors.response.use(
         processQueue(null);
         return db(originalRequest);
       } catch (err: any) {
-        const error = err as AxiosError;
-        processQueue(error);
+        processQueue(err);
 
         // 5️⃣ Nếu /agent/auth/me cũng 401 → refreshToken cũng hết hạn
         if (err?.response?.status === 401) {
@@ -91,7 +94,7 @@ db.interceptors.response.use(
     }
 
     // 6️⃣ Nếu chính /agent/auth/me bị 401 → không làm gì thêm (tránh loop)
-    if (status === 401 && originalRequest.url?.includes("/agent/auth/me")) {
+    if (status === 401 && originalRequest.url.includes("/agent/auth/me")) {
       console.warn("Auth endpoint 401 - forcing logout...");
       window.location.href = "/login";
     }
