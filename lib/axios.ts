@@ -75,7 +75,8 @@ db.interceptors.response.use(
         processQueue(null);
         return db(originalRequest);
       } catch (err: any) {
-        processQueue(err);
+        const error = err as AxiosError;
+        processQueue(error);
 
         // 5️⃣ Nếu /agent/auth/me cũng 401 → refreshToken cũng hết hạn
         if (err?.response?.status === 401) {
