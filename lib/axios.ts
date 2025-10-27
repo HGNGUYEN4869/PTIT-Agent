@@ -16,7 +16,7 @@ export const api = axios.create({
 });
 export const db = axios.create({
   // baseURL: "http://172.16.6.91:2009",
-  baseURL: "http://localhost:8080/",
+  baseURL: "http://172.16.5.10:2005",
   headers: {
     accept: "application/json",
     "Content-Type": "application/json",
@@ -52,11 +52,17 @@ db.interceptors.response.use(
 
     const status = error.response.status;
 
+        // ✅ Thêm điều kiện: Không refresh cho login/register endpoints
+    const isAuthEndpoint = 
+      originalRequest.url.includes("/agent/auth/login") ||
+      originalRequest.url.includes("/agent/auth/register") ||
+      originalRequest.url.includes("/agent/auth/me");
+
     // 2️⃣ Nếu 401 mà chưa retry và không phải endpoint /agent/auth/me
     if (
       status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url.includes("/agent/auth/me")
+      !isAuthEndpoint
     ) {
       if (isRefreshing) {
         // Nếu đang refresh, thêm request vào hàng đợi
