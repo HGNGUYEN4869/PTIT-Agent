@@ -73,8 +73,25 @@ export default function ChatPage() {
         text = "Đọc file " + (fileId ? `${fileId}` : "tôi gửi");
         text += " giúp tôi và tóm tắt nội dung chính.";
       }
-      // Sau đó query
-      const queryRes = await ragQuery(text);
+
+      // ✅ Lấy 6 tin nhắn cuối cùng làm context
+      const last6Messages = messages.slice(-6);
+      const contextText = last6Messages
+        .map(
+          (msg) =>
+            `${msg.role === MessageRole.USER ? "User" : "Assistant"}: ${
+              msg.content
+            }`
+        )
+        .join("\n");
+
+      // ✅ Kết hợp context + text hiện tại
+      const fullQueryText = contextText
+        ? `Đoạn chat trên là cuộc hội thoại đang nói. Hãy trả lời câu hỏi ngay dưới đây${contextText}\nUser: ${text}`
+        : text;
+
+      // Sau đó query với full context
+      const queryRes = await ragQuery(fullQueryText);
       const botMsg: Message = {
         role: MessageRole.ASSISTANT,
         content:
