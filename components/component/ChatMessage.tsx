@@ -9,6 +9,7 @@ import rehypeSanitize from "rehype-sanitize";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { motion } from "framer-motion";
 import { MessageRole } from "@/types/message";
+import { BrainCircuit } from "lucide-react";
 
 interface ChatMessageProps {
   role: MessageRole;
@@ -41,8 +42,11 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
         transformOrigin: isUser ? "right top" : "left top",
       }} // trạng thái khi unmount (với AnimatePresence)
       transition={{ duration: 0.5 }} // thời gian và easing
-      className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}
+      className={cn("flex w-full relative", isUser ? "justify-end" : "justify-start")}
     >
+      {isUser ? (<></>) : (<div className="absolute top-0 bg-[#f5f5f5] p-2 rounded-full -left-10 shadow-md">
+        <BrainCircuit className="w-4 h-4" />
+      </div>)}
       <Card
         className={cn(
           "px-4 py-2 rounded-2xl text-sm shadow-md",

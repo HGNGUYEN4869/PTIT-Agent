@@ -62,7 +62,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex items-end justify-center gap-2 p-4 bg-transparent pl-0"
+      className="flex items-end justify-center gap-2 py-4 bg-transparent mr-4"
     >
       {/* Nút upload file */}
       <div className="relative">

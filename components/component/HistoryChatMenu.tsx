@@ -24,6 +24,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { triggerRefreshHistory } from "@/store/chatSlice";
+import { toast } from "sonner";
 
 const HistoryChatMenu = () => {
   const [loading, setLoading] = useState<boolean>(false);
@@ -70,7 +71,7 @@ const HistoryChatMenu = () => {
       const data: HistoryChat = await getHistoryChat();
       setThreads(data);
     } catch (error) {
-      console.error("Error fetching history chats:", error);
+      toast.error("Error fetching chat history");
     } finally {
       setLoading(false);
     }

@@ -4,12 +4,14 @@ interface ChatState {
   input: string;
   file?: File | undefined;
   refreshHistory: number; // Trigger để refresh history
+  isAgentMode: boolean; // Agent mode để ẩn sidebar và thu nhỏ chat
 }
 
 const initialState: ChatState = {
   input: "",
   file: undefined,
   refreshHistory: 0,
+  isAgentMode: false,
 };
 
 const chatSlice = createSlice({
@@ -30,9 +32,18 @@ const chatSlice = createSlice({
     triggerRefreshHistory(state) {
       state.refreshHistory += 1;
     },
+    // Set agent mode
+    setAgentMode(state, action: PayloadAction<boolean>) {
+      state.isAgentMode = action.payload;
+    },
   },
 });
 
-export const { setInput, setFile, clearChatState, triggerRefreshHistory } =
-  chatSlice.actions;
+export const {
+  setInput,
+  setFile,
+  clearChatState,
+  triggerRefreshHistory,
+  setAgentMode,
+} = chatSlice.actions;
 export default chatSlice.reducer;

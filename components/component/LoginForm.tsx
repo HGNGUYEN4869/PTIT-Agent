@@ -25,6 +25,7 @@ import { RootState } from "@/store/store";
 import { setAuth } from "@/store/authSlice";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { toast } from "sonner";
 
 // ✅ Schema validation với zod
 const loginSchema = z.object({
@@ -65,8 +66,9 @@ export default function LoginForm() {
         setLoading(false);
         router.push("/");
       }
-    } catch (error) {
-      console.log(error);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.error || "Đăng nhập thất bại";
+      toast.error(errorMessage);
       setLoading(false);
     }
   };
@@ -103,7 +105,7 @@ export default function LoginForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <Mail className="w-4 h-4"/> Email
+                      <Mail className="w-4 h-4" /> Email
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Email" {...field} />
@@ -119,7 +121,9 @@ export default function LoginForm() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel><LockKeyhole className="w-4 h-4"/> Password</FormLabel>
+                    <FormLabel>
+                      <LockKeyhole className="w-4 h-4" /> Password
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="password"

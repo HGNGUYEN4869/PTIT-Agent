@@ -18,7 +18,7 @@ export default function Home() {
   const dispatch = useDispatch();
   const router = useRouter();
   const [loading, setLoading] = useState<boolean>(false);
-  const { input, file } = useSelector((state: RootState) => state.chat);
+  const { input, file, isAgentMode } = useSelector((state: RootState) => state.chat);
 
   const handleStartChat = async (input: string, file?: File | undefined) => {
     if (!input.trim() && !file) return;
@@ -56,7 +56,7 @@ export default function Home() {
       </div>
 
       {/* 👇 Giữ cố định input ở đáy */}
-      <div className="absolute z-10 w-full py-4 mb-1 bg-transparent -bottom-0 left-1/2 -translate-x-1/2 px-72">
+      <div className={`absolute z-10 w-full py-4 mb-1 bg-transparent -bottom-0 left-1/2 -translate-x-1/2 ${isAgentMode ? 'pl-4' : 'px-72'}`}>
         <ChatInput onSend={handleStartChat} disabled={loading} />
       </div>
     </div>

@@ -16,7 +16,7 @@ export const api = axios.create({
 });
 export const db = axios.create({
   // baseURL: "http://172.16.6.91:2009",
-  baseURL: "http://172.16.5.10:2005",
+  baseURL: "http://localhost:2005",
   headers: {
     accept: "application/json",
     "Content-Type": "application/json",

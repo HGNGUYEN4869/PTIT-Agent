@@ -25,6 +25,7 @@ import { RootState } from "@/store/store";
 import { setAuth } from "@/store/authSlice";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { toast } from "sonner";
 
 // ✅ Schema validation với zod
 const loginSchema = z.object({
@@ -67,8 +68,9 @@ export default function RegisterForm() {
         setLoading(false);
         router.push("/");
       }
-    } catch (error) {
-      console.log(error);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.error || "Đăng ký thất bại";
+      toast.error(errorMessage);
       setLoading(false);
     }
   };
