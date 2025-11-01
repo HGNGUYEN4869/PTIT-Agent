@@ -16,13 +16,13 @@ const IDETerminal = ({ sessionId }: IDETerminalProps) => {
       : null;
 
   const logs = useWebSocketLogs(wsUrl);
-  const containerRef = useRef<HTMLDivElement>(null);
+  // const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
-    }
-  }, [logs]);
+  // useEffect(() => {
+  //   if (containerRef.current) {
+  //     containerRef.current.scrollTop = containerRef.current.scrollHeight;
+  //   }
+  // }, [logs]);
 
   // Gửi lệnh đi
   const handleSubmit = (e: React.FormEvent) => {

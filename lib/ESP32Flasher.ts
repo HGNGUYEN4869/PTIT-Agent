@@ -34,6 +34,7 @@ export class ESP32Flasher {
   private onProgress?: (progress: FlashProgress) => void;
   private config: ESP32Config;
   private esploader?: ESPLoader;
+  private transport?: Transport; // Lưu transport để disconnect sau
 
   constructor(
     port: SerialPort,
@@ -62,11 +63,11 @@ export class ESP32Flasher {
       });
 
       // Initialize transport
-      const transport = new Transport(this.port as any, true);
+      this.transport = new Transport(this.port as any, true);
 
       // Initialize ESPLoader with all required options
       this.esploader = new ESPLoader({
-        transport,
+        transport: this.transport,
         baudrate: this.config.baudRate,
         flashSize: this.config.flashSize,
         terminal: {
@@ -94,12 +95,17 @@ export class ESP32Flasher {
         message: `Đã kết nối với ${chipName}`,
       });
 
-      // Change baud rate for faster flashing (changeBaud không nhận parameter)
-      try {
-        await this.esploader.changeBaud();
-        console.log("Baud rate changed for faster flashing");
-      } catch (err) {
-        console.warn("Failed to change baud rate, using default");
+      // KHÔNG đổi baud rate cho ESP8266 vì thường gây lỗi
+      // Chỉ đổi cho ESP32
+      if (chipName.includes("ESP32") && !chipName.includes("ESP8266")) {
+        try {
+          await this.esploader.changeBaud();
+          console.log("Baud rate changed for faster flashing");
+        } catch (err) {
+          console.warn("Failed to change baud rate, using default");
+        }
+      } else {
+        console.log("Keeping default baud rate for ESP8266");
       }
 
       this.onProgress?.({
@@ -115,6 +121,10 @@ export class ESP32Flasher {
       }
 
       // esptool-js writeFlash expects FlashOptions
+      // Sử dụng flashMode phù hợp cho từng chip
+      const flashMode = chipName.includes("ESP8266") ? "qio" : "dio";
+      const flashFreq = chipName.includes("ESP8266") ? "40m" : "40m";
+
       await this.esploader.writeFlash({
         fileArray: [
           {
@@ -122,8 +132,8 @@ export class ESP32Flasher {
             address: flashOffset,
           },
         ],
-        flashMode: "dio",
-        flashFreq: "40m",
+        flashMode: flashMode,
+        flashFreq: flashFreq,
         eraseAll: false,
         compress: true,
         reportProgress: (fileIndex: number, written: number, total: number) => {
@@ -137,21 +147,60 @@ export class ESP32Flasher {
 
       this.onProgress?.({
         percentage: 95,
-        message: "Hoàn tất, đang reset ESP32...",
+        message: "Hoàn tất, đang reset ESP...",
       });
 
-      // Reset ESP32 to run new firmware (dùng softReset thay vì hardReset)
-      await this.esploader.softReset(false); // false = không ở lại bootloader
+      // Reset ESP to run new firmware (chỉ dùng softReset vì hardReset không có trong esptool-js)
+      try {
+        await this.esploader.softReset(false); // false = không ở lại bootloader
+        console.log("ESP soft reset completed");
+      } catch (resetErr) {
+        console.warn("Soft reset failed:", resetErr);
+        // Không throw error vì firmware đã được flash thành công
+        // User có thể reset thủ công bằng nút RESET trên board
+      }
 
       this.onProgress?.({
         percentage: 100,
         message: "Nạp code thành công!",
       });
 
-      console.log("ESP32 flash completed successfully");
+      console.log("ESP32/ESP8266 flash completed successfully");
     } catch (error: any) {
       console.error("ESP32 flash error:", error);
-      throw new Error(`Flash ESP32 thất bại: ${error.message}`);
+
+      // Kiểm tra lỗi cụ thể và đưa ra gợi ý
+      let errorMessage = error.message || "Lỗi không xác định";
+
+      if (errorMessage.includes("No serial data received")) {
+        errorMessage =
+          "Không nhận được dữ liệu từ ESP. Hãy thử:\n" +
+          "1. Nhấn giữ nút BOOT trên board\n" +
+          "2. Nhấn nút RESET\n" +
+          "3. Thả nút RESET\n" +
+          "4. Thả nút BOOT\n" +
+          "5. Thử lại việc nạp code";
+      } else if (
+        errorMessage.includes("Failed to communicate with the flash chip")
+      ) {
+        errorMessage =
+          "Không kết nối được với chip flash. Hãy thử:\n" +
+          "1. Kiểm tra dây kết nối USB\n" +
+          "2. Thử cổng USB khác\n" +
+          "3. Đảm bảo driver CH340/CP2102 đã được cài đặt";
+      }
+
+      throw new Error(`Flash ESP32 thất bại: ${errorMessage}`);
+    } finally {
+      // QUAN TRỌNG: Disconnect transport để giải phóng port
+      if (this.transport) {
+        try {
+          await this.transport.disconnect();
+          console.log("✅ Transport disconnected, port đã được giải phóng");
+        } catch (disconnectErr) {
+          console.warn("⚠️ Không thể disconnect transport:", disconnectErr);
+        }
+      }
     }
   }
 
@@ -159,11 +208,48 @@ export class ESP32Flasher {
    * Enter bootloader mode manually (for boards without auto-reset)
    */
   static async enterBootloaderMode(): Promise<void> {
-    toast.info("Cách vào chế độ bootloader ESP32:");
-    toast.info("1. Giữ nút BOOT");
-    toast.info("2. Nhấn nút RESET");
-    toast.info("3. Thả nút RESET");
-    toast.info("4. Thả nút BOOT");
-    await new Promise((r) => setTimeout(r, 5000)); // 5s để user thực hiện
+    toast.info(
+      `Hướng dẫn vào chế độ Bootloader (ESP32/ESP8266): Giữ nút BOOT (hoặc FLASH/IO0) rồi nhấn nút RESET (hoặc EN/RST) cuối cùng hãy thả nút BOOT`,
+      { duration: 8000 }
+    );
+  }
+
+  /**
+   * Hiển thị hướng dẫn khắc phục lỗi flash chip
+   */
+  static showFlashChipTroubleshooting(): void {
+    toast.error("Không kết nối được với chip flash!", {
+      duration: 15000,
+    });
+
+    setTimeout(() => {
+      toast.info("Các bước khắc phục:", {
+        duration: 15000,
+      });
+    }, 500);
+
+    setTimeout(() => {
+      toast.info("1. Kiểm tra cáp USB (thử cáp khác)", {
+        duration: 15000,
+      });
+    }, 1500);
+
+    setTimeout(() => {
+      toast.info("2. Thử cổng USB khác trên máy tính", {
+        duration: 15000,
+      });
+    }, 2500);
+
+    setTimeout(() => {
+      toast.info("3. Cài đặt driver CH340/CP2102 nếu chưa có", {
+        duration: 15000,
+      });
+    }, 3500);
+
+    setTimeout(() => {
+      toast.info("4. Vào bootloader mode thủ công (xem hướng dẫn)", {
+        duration: 15000,
+      });
+    }, 4500);
   }
 }

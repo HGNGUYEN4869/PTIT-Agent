@@ -5,6 +5,13 @@ import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { Terminal } from "../ui/terminal";
 import { Send, Power, Trash2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 type SerialMonitorProps = {
   serialPort: SerialPort | null;
@@ -15,6 +22,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
   const [input, setInput] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [baudRate, setBaudRate] = useState(115200);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(
     null
   );
@@ -33,8 +41,6 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
       //Luôn đóng port trước khi mở lại (đảm bảo clean state)
       try {
         if (serialPort.readable || serialPort.writable) {
-          console.log("Port đang mở, đóng lại trước...");
-
           // Release reader/writer nếu có
           if (serialPort.readable?.locked) {
             const reader = serialPort.readable.getReader();
@@ -46,19 +52,26 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
           }
 
           await serialPort.close();
-          console.log("Port đã đóng");
         }
 
         // Đợi một chút để port được giải phóng hoàn toàn
         await new Promise((resolve) => setTimeout(resolve, 300));
       } catch (closeError) {
-        console.warn("Lỗi khi đóng port (có thể đã đóng rồi):", closeError);
-        // Không throw error, tiếp tục mở port
+        // Port có thể đã đóng rồi, tiếp tục mở port
       }
 
-      // Mở port với baudRate
-      console.log(`Đang mở port với baudRate ${baudRate}...`);
       await serialPort.open({ baudRate });
+
+      // Tắt DTR/RTS signals để tránh ESP32 bị auto-reset
+      try {
+        await (serialPort as any).setSignals({
+          dataTerminalReady: false, // DTR = LOW
+          requestToSend: false, // RTS = LOW
+        });
+      } catch (signalErr) {
+        // Board không hỗ trợ signal control, bỏ qua
+      }
+
       setIsConnected(true);
       toast.success(`Đã kết nối Serial Monitor (${baudRate} baud)`);
 
@@ -66,7 +79,6 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
       startReading();
     } catch (error: any) {
       toast.error(`Lỗi kết nối: ${error.message}`);
-      console.error("Serial connect error:", error);
       setIsConnected(false);
     }
   };
@@ -81,10 +93,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
     try {
       while (true) {
         const { value, done } = await readerRef.current.read();
-        if (done) {
-          console.log("Serial reader closed");
-          break;
-        }
+        if (done) break;
 
         if (value) {
           const text = decoder.decode(value);
@@ -92,7 +101,6 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
         }
       }
     } catch (error: any) {
-      console.error("Serial read error:", error);
       if (!error.message.includes("device has been lost")) {
         toast.error(`Lỗi đọc dữ liệu: ${error.message}`);
       }
@@ -147,9 +155,15 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
       setIsConnected(false);
       toast.info("Đã ngắt kết nối Serial Monitor");
     } catch (error: any) {
-      console.error("Disconnect error:", error);
+      toast.error("Lỗi khi ngắt kết nối");
     }
   };
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [logs]);
 
   // Cleanup khi unmount
   useEffect(() => {
@@ -164,18 +178,25 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
       <div className="flex items-center justify-between p-2 border-b border-gray-700 bg-gray-800">
         <h3 className="text-sm font-semibold text-white">📡 Serial Monitor</h3>
         <div className="flex items-center gap-2">
-          <select
-            value={baudRate}
-            onChange={(e) => setBaudRate(Number(e.target.value))}
+          <Select
+            value={baudRate.toString()}
+            onValueChange={(value) => setBaudRate(Number(value))}
             disabled={isConnected}
-            className="text-xs bg-gray-700 text-white px-2 py-1 rounded border border-gray-600"
           >
-            <option value={9600}>9600</option>
-            <option value={115200}>115200</option>
-            <option value={57600}>57600</option>
-            <option value={38400}>38400</option>
-          </select>
-          
+            <SelectTrigger
+              size="sm"
+              className="w-fit bg-gray-700 border-gray-600 text-white"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="9600">9600</SelectItem>
+              <SelectItem value="115200">115200</SelectItem>
+              <SelectItem value="57600">57600</SelectItem>
+              <SelectItem value="38400">38400</SelectItem>
+            </SelectContent>
+          </Select>
+
           {!isConnected ? (
             <Button size="sm" onClick={connectSerial} className="gap-1">
               <Power className="w-3 h-3" />
@@ -213,11 +234,16 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
               : "Nhấn 'Kết nối' để bắt đầu"}
           </div>
         ) : (
-          logs.map((log, i) => (
-            <div key={i} className="whitespace-pre-wrap wrap-break-word">
-              {log}
-            </div>
-          ))
+          <div
+            ref={scrollRef}
+            className="bg-[#1e1e1e] text-white font-mono h-[266px] overflow-y-auto w-full none-scrollbar -mr-8"
+          >
+            {logs.map((log, i) => (
+              <div key={i} className="whitespace-pre-wrap wrap-break-words">
+                {log}
+              </div>
+            ))}
+          </div>
         )}
       </Terminal>
     </div>

@@ -45,7 +45,7 @@ export async function selectDirectory(): Promise<FileSystemDirectoryHandle | nul
       mode: "readwrite", // Cho phép đọc và ghi
     });
 
-    console.log("📁 Directory selected:", dirHandle.name);
+    console.log("Directory selected:", dirHandle.name);
     return dirHandle;
   } catch (error) {
     console.error("User cancelled directory selection or error:", error);

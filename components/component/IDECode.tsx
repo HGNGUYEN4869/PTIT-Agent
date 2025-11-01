@@ -3,15 +3,15 @@
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import Editor from "@monaco-editor/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFileSystem } from "@/hooks/use-file-system";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import {
   Folder,
   FileText,
   RefreshCw,
   AlertCircle,
-  Save,
   ChevronRight,
   ChevronDown,
   Folders,
@@ -27,10 +27,20 @@ import {
 } from "@/components/ui/select";
 import IDEPanel from "./IDEPanel";
 import FlashAllBoards from "./FlashBoard";
-import { SerialMonitor } from "./SerialMonitor";
 import { compileArduino } from "@/app/api/arduinoCompile";
 import { toast } from "sonner";
-import { uuidv4 } from "zod";
+
+// Danh sách các board được hỗ trợ
+const SUPPORTED_BOARDS = [
+  { fqbn: "arduino:avr:uno", name: "Arduino UNO", type: "UNO" },
+  { fqbn: "arduino:avr:nano", name: "Arduino Nano", type: "UNO" },
+  { fqbn: "arduino:avr:mega", name: "Arduino Mega", type: "UNO" },
+  { fqbn: "esp8266:esp8266:generic", name: "ESP8266 Generic", type: "ESP8266" },
+  { fqbn: "esp32:esp32:esp32", name: "ESP32 Dev Module", type: "ESP32" },
+  { fqbn: "esp32:esp32:esp32s2", name: "ESP32-S2", type: "ESP32" },
+  { fqbn: "esp32:esp32:esp32s3", name: "ESP32-S3", type: "ESP32" },
+  { fqbn: "esp32:esp32:esp32c3", name: "ESP32-C3", type: "ESP32" },
+] as const;
 
 export function IDECode() {
   const { isAgentMode } = useSelector((state: RootState) => state.chat);
@@ -44,11 +54,8 @@ export function IDECode() {
 
   // Helper: Convert FQBN to simple board type
   const getBoardType = (fqbn: string): string => {
-    if (fqbn.startsWith("arduino:avr:")) return "UNO";
-    if (fqbn.startsWith("esp8266:")) return "ESP8266";
-    if (fqbn.startsWith("esp32:")) return "ESP32";
-    if (fqbn.startsWith("stm32:")) return "STM32";
-    return "UNO"; // Default
+    const board = SUPPORTED_BOARDS.find((b) => b.fqbn === fqbn);
+    return board?.type || "UNO";
   };
 
   const {
@@ -67,6 +74,36 @@ export function IDECode() {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set()
   );
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Debounce code để auto-save sau 2s không thay đổi
+  const debouncedCode = useDebounce(code, 2000);
+
+  // Auto-save khi debouncedCode thay đổi
+  useEffect(() => {
+    const autoSave = async () => {
+      // Chỉ auto-save khi:
+      // 1. Có file đang được chọn
+      // 2. Code không undefined
+      // 3. Không đang loading file
+      // 4. Code đã được debounce (đã dừng gõ 2s)
+      if (!selectedFile || debouncedCode === undefined || loading) {
+        return;
+      }
+
+      setIsSaving(true);
+      const success = await updateFileContent(selectedFile, debouncedCode);
+
+      if (success) {
+      } else {
+        toast.error(`❌ Lỗi khi lưu ${selectedFile.split("/").pop()}`);
+      }
+
+      setIsSaving(false);
+    };
+
+    autoSave();
+  }, [debouncedCode, selectedFile, loading, updateFileContent]);
 
   // Tạo cấu trúc tree từ flat file list
   const buildFileTree = (files: string[]) => {
@@ -303,17 +340,6 @@ export function IDECode() {
     setLoading(false);
   };
 
-  const handleSaveFile = async () => {
-    if (!selectedFile || code === undefined) return;
-
-    const success = await updateFileContent(selectedFile, code);
-    if (success) {
-      toast.success(`Đã lưu ${selectedFile}`);
-    } else {
-      toast.error(`Lỗi khi lưu ${selectedFile}`);
-    }
-  };
-
   const handleCompileArduino = async () => {
     if (!selectedFile || !selectedFile.endsWith(".ino") || code === undefined) {
       toast.error("Vui lòng chọn file .ino trước khi compile");
@@ -321,9 +347,10 @@ export function IDECode() {
     }
 
     setIsCompiling(true);
-
     // Generate unique session ID
-    const newSessionId = `compile-${uuidv4()}-${Date.now()}`;
+    const newSessionId = `compile-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 9)}`;
 
     // Set sessionId TRƯỚC để WebSocket connect trước khi compile
     setCompileSessionId(newSessionId);
@@ -400,15 +427,6 @@ export function IDECode() {
 
               {selectedFile && (
                 <>
-                  <Button
-                    size="sm"
-                    onClick={handleSaveFile}
-                    className="gap-1 bg-green-600 hover:bg-green-700"
-                  >
-                    <Save className="w-3 h-3" />
-                    Lưu
-                  </Button>
-
                   {/* Compile Arduino (chỉ hiện khi là file .ino) */}
                   {selectedFile.endsWith(".ino") && (
                     <>
@@ -421,30 +439,11 @@ export function IDECode() {
                           <SelectValue placeholder="Chọn board" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="arduino:avr:uno">
-                            Arduino UNO
-                          </SelectItem>
-                          <SelectItem value="arduino:avr:nano">
-                            Arduino Nano
-                          </SelectItem>
-                          <SelectItem value="arduino:avr:mega">
-                            Arduino Mega
-                          </SelectItem>
-                          <SelectItem value="esp8266:esp8266:generic">
-                            ESP8266 Generic
-                          </SelectItem>
-                          <SelectItem value="esp32:esp32:esp32">
-                            ESP32 Dev Module
-                          </SelectItem>
-                          <SelectItem value="esp32:esp32:esp32s2">
-                            ESP32-S2
-                          </SelectItem>
-                          <SelectItem value="esp32:esp32:esp32s3">
-                            ESP32-S3
-                          </SelectItem>
-                          <SelectItem value="esp32:esp32:esp32c3">
-                            ESP32-C3
-                          </SelectItem>
+                          {SUPPORTED_BOARDS.map((board) => (
+                            <SelectItem key={board.fqbn} value={board.fqbn}>
+                              {board.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
 

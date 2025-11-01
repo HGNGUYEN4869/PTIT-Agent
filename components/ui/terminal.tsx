@@ -235,7 +235,7 @@ export const Terminal = ({
       )}
     >
       <pre className="p-4 hide-scrollbar w-full">
-        <code className="grid gap-y-1 overflow-y-auto hide-scrollbar whitespace-pre-wrap break-words max-w-full">
+        <code className="grid gap-y-1 overflow-y-auto hide-scrollbar whitespace-pre-wrap wrap-break-words max-w-full">
           {wrappedChildren}
         </code>
       </pre>

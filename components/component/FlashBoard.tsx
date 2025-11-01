@@ -195,7 +195,9 @@ export default function FlashAllBoards({
       // FlashOffset sẽ tự động được xử lý trong ESP32Flasher dựa vào chip detect
       await flasher.flash(binData); // Sử dụng default offset 0x0
 
-      toast.success("Nạp code thành công! ESP32/ESP8266 đang chạy firmware mới.");
+      toast.success(
+        "Nạp code thành công! ESP32/ESP8266 đang chạy firmware mới."
+      );
 
       // 4. Callback để IDECode biết flash xong
       if (onFlashComplete) {
@@ -205,8 +207,47 @@ export default function FlashAllBoards({
       }
     } catch (error: any) {
       console.error("Flash ESP32/ESP8266 error:", error);
-      toast.error(`Lỗi nạp ESP32/ESP8266: ${error.message || error}`);
+
+      // Hiển thị hướng dẫn chi tiết dựa vào loại lỗi
+      const errorMsg = error.message || error.toString();
+
+      if (errorMsg.includes("Failed to communicate with the flash chip")) {
+        ESP32Flasher.showFlashChipTroubleshooting();
+      } else if (errorMsg.includes("No serial data received")) {
+        toast.error("Không nhận được dữ liệu từ ESP!", {
+          duration: 10000,
+        });
+        setTimeout(() => {
+          toast.info("Hãy vào bootloader mode thủ công và thử lại", {
+            duration: 10000,
+          });
+        }, 1000);
+      } else {
+        toast.error(`Lỗi nạp ESP32/ESP8266: ${errorMsg.substring(0, 100)}`);
+      }
+
       throw error;
+    } finally {
+      // QUAN TRỌNG: Đóng port để giải phóng khi lỗi hoặc thành công
+      try {
+        // Release reader/writer nếu đang locked
+        if (port.readable?.locked) {
+          const reader = port.readable.getReader();
+          reader.releaseLock();
+        }
+        if (port.writable?.locked) {
+          const writer = port.writable.getWriter();
+          writer.releaseLock();
+        }
+
+        // Đóng port nếu đang mở
+        if (port.readable || port.writable) {
+          await port.close();
+          console.log("✅ Port đã được đóng và giải phóng");
+        }
+      } catch (closeErr) {
+        console.warn("Không thể đóng port (có thể đã đóng rồi):", closeErr);
+      }
     }
   }
 
@@ -257,8 +298,12 @@ export default function FlashAllBoards({
         if (boardType === "STM32") {
           board = { type: "STM32" };
         } else {
+          if(boardType === "ESP32" || boardType === "ESP8266"){
+            ESP32Flasher.enterBootloaderMode()
+          }
           // UNO hoặc ESP32 cần serial port
-          const port = (await navigator.serial.requestPort()) as any as SerialPort;
+          const port =
+            (await navigator.serial.requestPort()) as any as SerialPort;
           board = { type: boardType, port };
         }
         toast.success(`Sử dụng board đã chọn: ${boardType}`);
@@ -283,7 +328,7 @@ export default function FlashAllBoards({
   }
 
   return (
-    <div>
+    <div className="flex gap-2 items-center">
       <Button
         disabled={isFlashing || !sessionId}
         onClick={handleFlash}
