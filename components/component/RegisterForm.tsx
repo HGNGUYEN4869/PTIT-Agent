@@ -27,7 +27,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { toast } from "sonner";
 
-// ✅ Schema validation với zod
+//  Schema validation với zod
 const loginSchema = z.object({
   username: z.string().min(3, "Username phải có ít nhất 3 ký tự"),
   email: z.string().email("Email phải có dạng @ptit.edu.vn"),
@@ -107,7 +107,7 @@ export default function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <UserPlus className="w-4 h-4"/> Username
+                      <UserPlus className="w-4 h-4" /> Username
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Username" {...field} />
@@ -124,7 +124,7 @@ export default function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <Mail className="w-4 h-4"/> Email
+                      <Mail className="w-4 h-4" /> Email
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Email" {...field} />
@@ -141,7 +141,7 @@ export default function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <LockKeyhole className="w-4 h-4"/> Password
+                      <LockKeyhole className="w-4 h-4" /> Password
                     </FormLabel>
                     <FormControl>
                       <Input

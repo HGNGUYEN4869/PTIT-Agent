@@ -63,14 +63,47 @@ export function useFileSystem() {
 
   /**
    * Tạo file mới từ code do backend sinh ra
+   * AUTO-PROMPT user chọn thư mục nếu chưa chọn
    */
   const createFileFromCode = useCallback(
     async (fileName: string, code: string): Promise<boolean> => {
+      // Nếu chưa chọn thư mục, tự động prompt user
       if (!state.directoryHandle) {
-        alert("Vui lòng chọn thư mục làm việc trước!");
-        return false;
+        const userConfirm = confirm(
+          `AI cần tạo file "${fileName}"\n\nBạn cần chọn thư mục để lưu file này. Chọn OK để chọn thư mục.`
+        );
+
+        if (!userConfirm) {
+          console.log("User cancelled folder selection");
+          return false;
+        }
+
+        // Auto open folder picker
+        const handle = await selectDirectory();
+        if (!handle) {
+          alert("Không thể tạo file vì bạn chưa chọn thư mục!");
+          return false;
+        }
+
+        // Update state
+        setState((prev) => ({
+          ...prev,
+          directoryHandle: handle,
+          currentDirectory: handle.name,
+        }));
+
+        // Tạo file với handle mới
+        try {
+          await createFile(handle, fileName, code);
+          await loadFileList(handle);
+          return true;
+        } catch (error) {
+          console.error("Error creating file:", error);
+          return false;
+        }
       }
 
+      // Đã có directoryHandle, tạo file bình thường
       try {
         await createFile(state.directoryHandle, fileName, code);
         await loadFileList();
@@ -85,14 +118,47 @@ export function useFileSystem() {
 
   /**
    * Tạo file với đường dẫn nested (src/components/Button.tsx)
+   * AUTO-PROMPT user chọn thư mục nếu chưa chọn
    */
   const createNestedFileFromCode = useCallback(
     async (filePath: string, code: string): Promise<boolean> => {
+      // Nếu chưa chọn thư mục, tự động prompt user
       if (!state.directoryHandle) {
-        alert("Vui lòng chọn thư mục làm việc trước!");
-        return false;
+        const userConfirm = confirm(
+          `AI cần tạo file "${filePath}"\n\nBạn cần chọn thư mục để lưu file này. Chọn OK để chọn thư mục.`
+        );
+
+        if (!userConfirm) {
+          console.log("User cancelled folder selection");
+          return false;
+        }
+
+        // Auto open folder picker
+        const handle = await selectDirectory();
+        if (!handle) {
+          alert("Không thể tạo file vì bạn chưa chọn thư mục!");
+          return false;
+        }
+
+        // Update state
+        setState((prev) => ({
+          ...prev,
+          directoryHandle: handle,
+          currentDirectory: handle.name,
+        }));
+
+        // Tạo file với handle mới
+        try {
+          await createNestedFile(handle, filePath, code);
+          await loadFileList(handle);
+          return true;
+        } catch (error) {
+          console.error("Error creating nested file:", error);
+          return false;
+        }
       }
 
+      // Đã có directoryHandle, tạo file bình thường
       try {
         await createNestedFile(state.directoryHandle, filePath, code);
         await loadFileList();
@@ -161,6 +227,7 @@ export function useFileSystem() {
 
   /**
    * Process code từ backend và tự động tạo/sửa files
+   * AUTO-PROMPT user chọn thư mục nếu chưa chọn
    */
   const processBackendCode = useCallback(
     async (
@@ -170,50 +237,98 @@ export function useFileSystem() {
         content?: string;
       }>
     ): Promise<void> => {
+      // Nếu chưa chọn thư mục, tự động prompt user
       if (!state.directoryHandle) {
-        alert("Vui lòng chọn thư mục làm việc trước!");
+        const userConfirm = confirm(
+          `AI cần tạo/sửa ${operations.length} file(s)\n\nBạn cần chọn thư mục để lưu các file này. Chọn OK để chọn thư mục.`
+        );
+
+        if (!userConfirm) {
+          console.log("User cancelled folder selection");
+          return;
+        }
+
+        // Auto open folder picker
+        const handle = await selectDirectory();
+        if (!handle) {
+          alert("Không thể tạo file vì bạn chưa chọn thư mục!");
+          return;
+        }
+
+        // Update state
+        setState((prev) => ({
+          ...prev,
+          directoryHandle: handle,
+          currentDirectory: handle.name,
+        }));
+
+        // Process với handle mới
+        for (const op of operations) {
+          try {
+            switch (op.type) {
+              case "create":
+                if (op.content) {
+                  await createNestedFile(handle, op.path, op.content);
+                  console.log(` Created: ${op.path}`);
+                }
+                break;
+
+              case "update":
+                if (op.content) {
+                  await updateFile(handle, op.path, op.content);
+                  console.log(` Updated: ${op.path}`);
+                }
+                break;
+
+              case "delete":
+                await deleteFile(handle, op.path);
+                console.log(` Deleted: ${op.path}`);
+                break;
+            }
+          } catch (error) {
+            console.error(`Error processing ${op.type} for ${op.path}:`, error);
+          }
+        }
+
+        await loadFileList(handle);
         return;
       }
 
+      // Đã có directoryHandle, process bình thường
       for (const op of operations) {
         try {
           switch (op.type) {
             case "create":
               if (op.content) {
-                await createNestedFileFromCode(op.path, op.content);
-                console.log(`✅ Created: ${op.path}`);
+                await createNestedFile(
+                  state.directoryHandle,
+                  op.path,
+                  op.content
+                );
+                console.log(` Created: ${op.path}`);
               }
               break;
 
             case "update":
               if (op.content) {
-                await updateFileContent(op.path, op.content);
-                console.log(`✅ Updated: ${op.path}`);
+                await updateFile(state.directoryHandle, op.path, op.content);
+                console.log(` Updated: ${op.path}`);
               }
               break;
 
             case "delete":
-              await deleteFileByName(op.path);
-              console.log(`✅ Deleted: ${op.path}`);
+              await deleteFile(state.directoryHandle, op.path);
+              console.log(` Deleted: ${op.path}`);
               break;
           }
         } catch (error) {
-          console.error(
-            `❌ Error processing ${op.type} for ${op.path}:`,
-            error
-          );
+          console.error(`Error processing ${op.type} for ${op.path}:`, error);
         }
       }
 
       await loadFileList();
     },
-    [
-      state.directoryHandle,
-      createNestedFileFromCode,
-      updateFileContent,
-      deleteFileByName,
-      loadFileList,
-    ]
+    [state.directoryHandle, loadFileList]
   );
 
   return {

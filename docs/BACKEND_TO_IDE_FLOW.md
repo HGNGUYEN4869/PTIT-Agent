@@ -1,4 +1,4 @@
-# 🔄 Complete Flow: Backend → IDE
+# Complete Flow: Backend → IDE
 
 ## 📋 Tổng quan
 
@@ -43,8 +43,8 @@ Backend response:
 
 **Quan trọng:** Backend phải trả về:
 
-- ✅ `isAgentMode: true` - Để trigger Agent Mode
-- ✅ Code trong format markdown: `language:filepath`
+- `isAgentMode: true` - Để trigger Agent Mode
+- Code trong format markdown: `language:filepath`
 
 ### **Step 4: Frontend nhận response**
 
@@ -210,7 +210,7 @@ Files (1)
 // 5. Show success notification
 const fileNotification: Message = {
   role: MessageRole.ASSISTANT,
-  content: `✅ Đã tạo/cập nhật 1 file(s):
+  content: ` Đã tạo/cập nhật 1 file(s):
 - main.cpp (cpp)`,
 };
 
@@ -220,7 +220,7 @@ setMessages((prev) => [...prev, fileNotification]);
 Chat hiển thị:
 
 ```
-✅ Đã tạo/cập nhật 1 file(s):
+ Đã tạo/cập nhật 1 file(s):
 - main.cpp (cpp)
 ```
 
@@ -301,7 +301,7 @@ Frontend receives
               ↓
          ┌──────────────────────────┐
          │ 7. Chat notification     │
-         │    ✅ Đã tạo 1 file      │
+         │     Đã tạo 1 file      │
          └──────────────────────────┘
 ````
 
@@ -366,7 +366,7 @@ Nếu cần control nhiều hơn:
 
 ---
 
-## ✅ Implementation Checklist
+## Implementation Checklist
 
 - [x] `ChatPage.tsx` - Import useFileSystem hook
 - [x] `ChatPage.tsx` - Extract operations from response

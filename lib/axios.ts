@@ -52,18 +52,14 @@ db.interceptors.response.use(
 
     const status = error.response.status;
 
-        // ✅ Thêm điều kiện: Không refresh cho login/register endpoints
-    const isAuthEndpoint = 
+    //  Thêm điều kiện: Không refresh cho login/register endpoints
+    const isAuthEndpoint =
       originalRequest.url.includes("/agent/auth/login") ||
       originalRequest.url.includes("/agent/auth/register") ||
       originalRequest.url.includes("/agent/auth/me");
 
     // 2️⃣ Nếu 401 mà chưa retry và không phải endpoint /agent/auth/me
-    if (
-      status === 401 &&
-      !originalRequest._retry &&
-      !isAuthEndpoint
-    ) {
+    if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         // Nếu đang refresh, thêm request vào hàng đợi
         return new Promise((resolve, reject) => {

@@ -76,9 +76,9 @@ export async function createFile(
     // Đóng stream
     await writable.close();
 
-    console.log(`✅ File created: ${fileName}`);
+    console.log(` File created: ${fileName}`);
   } catch (error) {
-    console.error(`❌ Error creating file ${fileName}:`, error);
+    console.error(`Error creating file ${fileName}:`, error);
     throw error;
   }
 }
@@ -112,7 +112,7 @@ export async function readFile(
     console.log(`📖 File read: ${filePath}`);
     return content;
   } catch (error) {
-    console.error(`❌ Error reading file ${filePath}:`, error);
+    console.error(`Error reading file ${filePath}:`, error);
     throw error;
   }
 }
@@ -149,7 +149,7 @@ export async function updateFile(
 
     console.log(`✏️ File updated: ${filePath}`);
   } catch (error) {
-    console.error(`❌ Error updating file ${filePath}:`, error);
+    console.error(`Error updating file ${filePath}:`, error);
     throw error;
   }
 }
@@ -173,7 +173,7 @@ export async function listFiles(
     console.log(`📋 Files found: ${files.length}`);
     return files;
   } catch (error) {
-    console.error("❌ Error listing files:", error);
+    console.error("Error listing files:", error);
     throw error;
   }
 }
@@ -204,7 +204,7 @@ export async function listFilesRecursive(
 
     return files;
   } catch (error) {
-    console.error("❌ Error listing files recursively:", error);
+    console.error("Error listing files recursively:", error);
     throw error;
   }
 }
@@ -229,7 +229,7 @@ export async function deleteFile(
     await currentHandle.removeEntry(fileName);
     console.log(`🗑️ File deleted: ${filePath}`);
   } catch (error) {
-    console.error(`❌ Error deleting file ${filePath}:`, error);
+    console.error(`Error deleting file ${filePath}:`, error);
     throw error;
   }
 }

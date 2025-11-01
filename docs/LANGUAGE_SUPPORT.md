@@ -1,52 +1,52 @@
 # 🔧 C++ và Ngôn Ngữ Khác Support
 
-## ✅ Các ngôn ngữ được hỗ trợ
+## Các ngôn ngữ được hỗ trợ
 
 ### **Compiled Languages:**
 
-- ✅ **C** (.c, .h)
-- ✅ **C++** (.cpp, .cc, .cxx, .hpp, .hh, .hxx)
-- ✅ **Java** (.java)
-- ✅ **C#** (.cs)
-- ✅ **Go** (.go)
-- ✅ **Rust** (.rs)
+- **C** (.c, .h)
+- **C++** (.cpp, .cc, .cxx, .hpp, .hh, .hxx)
+- **Java** (.java)
+- **C#** (.cs)
+- **Go** (.go)
+- **Rust** (.rs)
 
 ### **Interpreted Languages:**
 
-- ✅ **Python** (.py, .pyw)
-- ✅ **JavaScript** (.js, .mjs, .cjs)
-- ✅ **TypeScript** (.ts)
-- ✅ **PHP** (.php)
-- ✅ **Ruby** (.rb)
+- **Python** (.py, .pyw)
+- **JavaScript** (.js, .mjs, .cjs)
+- **TypeScript** (.ts)
+- **PHP** (.php)
+- **Ruby** (.rb)
 
 ### **Web Technologies:**
 
-- ✅ **HTML** (.html, .htm)
-- ✅ **CSS** (.css, .scss, .sass, .less)
-- ✅ **React/JSX** (.jsx, .tsx)
+- **HTML** (.html, .htm)
+- **CSS** (.css, .scss, .sass, .less)
+- **React/JSX** (.jsx, .tsx)
 
 ### **Mobile:**
 
-- ✅ **Swift** (.swift)
-- ✅ **Kotlin** (.kt)
-- ✅ **Dart** (.dart)
-- ✅ **Objective-C** (.m)
+- **Swift** (.swift)
+- **Kotlin** (.kt)
+- **Dart** (.dart)
+- **Objective-C** (.m)
 
 ### **Data & Config:**
 
-- ✅ **JSON** (.json)
-- ✅ **XML** (.xml)
-- ✅ **YAML** (.yaml, .yml)
-- ✅ **SQL** (.sql)
+- **JSON** (.json)
+- **XML** (.xml)
+- **YAML** (.yaml, .yml)
+- **SQL** (.sql)
 
 ### **Scripting:**
 
-- ✅ **Shell** (.sh, .bash, .zsh)
-- ✅ **R** (.r)
+- **Shell** (.sh, .bash, .zsh)
+- **R** (.r)
 
 ### **Markup:**
 
-- ✅ **Markdown** (.md, .markdown)
+- **Markdown** (.md, .markdown)
 
 ---
 
@@ -173,17 +173,17 @@ IDE tự động detect language dựa vào **file extension**:
 
 ---
 
-## ✅ Syntax Highlighting
+## Syntax Highlighting
 
 Monaco Editor hỗ trợ syntax highlighting cho tất cả ngôn ngữ trên:
 
-- ✅ Keywords highlighting
-- ✅ String highlighting
-- ✅ Comment highlighting
-- ✅ Function/Class highlighting
-- ✅ Bracket matching
-- ✅ Auto-indentation
-- ✅ Code folding
+- Keywords highlighting
+- String highlighting
+- Comment highlighting
+- Function/Class highlighting
+- Bracket matching
+- Auto-indentation
+- Code folding
 
 ---
 

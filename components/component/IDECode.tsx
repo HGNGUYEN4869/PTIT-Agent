@@ -18,12 +18,38 @@ import {
   LaptopMinimal,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import IDEPanel from "./IDEPanel";
+import FlashAllBoards from "./FlashBoard";
+import { SerialMonitor } from "./SerialMonitor";
+import { compileArduino } from "@/app/api/arduinoCompile";
+import { toast } from "sonner";
+import { uuidv4 } from "zod";
 
-export function IDECodePanel() {
+export function IDECode() {
   const { isAgentMode } = useSelector((state: RootState) => state.chat);
   const editorRef = useRef<any>(null);
   const [code, setCode] = useState<string | undefined>(undefined);
   const [language, setLanguage] = useState("typescript");
+  const [compileSessionId, setCompileSessionId] = useState<string>("");
+  const [isCompiling, setIsCompiling] = useState(false);
+  const [serialPort, setSerialPort] = useState<SerialPort | null>(null);
+  const [selectedBoard, setSelectedBoard] = useState<string>("arduino:avr:uno");
+
+  // Helper: Convert FQBN to simple board type
+  const getBoardType = (fqbn: string): string => {
+    if (fqbn.startsWith("arduino:avr:")) return "UNO";
+    if (fqbn.startsWith("esp8266:")) return "ESP8266";
+    if (fqbn.startsWith("esp32:")) return "ESP32";
+    if (fqbn.startsWith("stm32:")) return "STM32";
+    return "UNO"; // Default
+  };
 
   const {
     isSupported,
@@ -282,9 +308,52 @@ export function IDECodePanel() {
 
     const success = await updateFileContent(selectedFile, code);
     if (success) {
-      alert(`✅ Đã lưu file: ${selectedFile}`);
+      toast.success(`Đã lưu ${selectedFile}`);
     } else {
-      alert(`❌ Lỗi khi lưu file: ${selectedFile}`);
+      toast.error(`Lỗi khi lưu ${selectedFile}`);
+    }
+  };
+
+  const handleCompileArduino = async () => {
+    if (!selectedFile || !selectedFile.endsWith(".ino") || code === undefined) {
+      toast.error("Vui lòng chọn file .ino trước khi compile");
+      return;
+    }
+
+    setIsCompiling(true);
+
+    // Generate unique session ID
+    const newSessionId = `compile-${uuidv4()}-${Date.now()}`;
+
+    // Set sessionId TRƯỚC để WebSocket connect trước khi compile
+    setCompileSessionId(newSessionId);
+
+    // Đợi một chút để WebSocket connect
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    try {
+      // Tạo file blob từ code
+      const blob = new Blob([code], { type: "text/plain" });
+      const file = new File(
+        [blob],
+        selectedFile.split("/").pop() || "sketch.ino",
+        {
+          type: "text/plain",
+        }
+      );
+
+      toast.info(`Đang compile ${file.name}...`);
+
+      const data = await compileArduino(file, newSessionId, selectedBoard);
+
+      toast.success(`Compile thành công!`);
+    } catch (err: any) {
+      console.error("Compile error:", err);
+      toast.error(`Lỗi compile: ${err.response?.data?.error || err.message}`);
+      // Clear sessionId nếu compile fail
+      setCompileSessionId("");
+    } finally {
+      setIsCompiling(false);
     }
   };
 
@@ -318,7 +387,6 @@ export function IDECodePanel() {
               Chọn thư mục
             </Button>
           )}
-
           {directoryHandle && (
             <>
               <Button
@@ -329,15 +397,80 @@ export function IDECodePanel() {
               >
                 <RefreshCw className="w-3 h-3" />
               </Button>
+
               {selectedFile && (
-                <Button
-                  size="sm"
-                  onClick={handleSaveFile}
-                  className="gap-1 bg-green-600 hover:bg-green-700"
-                >
-                  <Save className="w-3 h-3" />
-                  Lưu
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveFile}
+                    className="gap-1 bg-green-600 hover:bg-green-700"
+                  >
+                    <Save className="w-3 h-3" />
+                    Lưu
+                  </Button>
+
+                  {/* Compile Arduino (chỉ hiện khi là file .ino) */}
+                  {selectedFile.endsWith(".ino") && (
+                    <>
+                      {/* Board Selector */}
+                      <Select
+                        value={selectedBoard}
+                        onValueChange={setSelectedBoard}
+                      >
+                        <SelectTrigger className="w-[200px] h-9 bg-gray-700 border-gray-600 text-white text-xs">
+                          <SelectValue placeholder="Chọn board" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="arduino:avr:uno">
+                            Arduino UNO
+                          </SelectItem>
+                          <SelectItem value="arduino:avr:nano">
+                            Arduino Nano
+                          </SelectItem>
+                          <SelectItem value="arduino:avr:mega">
+                            Arduino Mega
+                          </SelectItem>
+                          <SelectItem value="esp8266:esp8266:generic">
+                            ESP8266 Generic
+                          </SelectItem>
+                          <SelectItem value="esp32:esp32:esp32">
+                            ESP32 Dev Module
+                          </SelectItem>
+                          <SelectItem value="esp32:esp32:esp32s2">
+                            ESP32-S2
+                          </SelectItem>
+                          <SelectItem value="esp32:esp32:esp32s3">
+                            ESP32-S3
+                          </SelectItem>
+                          <SelectItem value="esp32:esp32:esp32c3">
+                            ESP32-C3
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Button
+                        size="sm"
+                        onClick={handleCompileArduino}
+                        disabled={isCompiling}
+                        className="gap-1 bg-orange-600 hover:bg-orange-700"
+                      >
+                        {isCompiling ? "Đang compile..." : "Compile"}
+                      </Button>
+                    </>
+                  )}
+
+                  {/* Flash Board - Luôn hiển thị để có thể nạp code bất kỳ lúc nào */}
+                  <FlashAllBoards
+                    sessionId={compileSessionId}
+                    boardType={getBoardType(selectedBoard)}
+                    onFlashComplete={(port) => {
+                      toast.success(
+                        "Flash hoàn tất! Port sẵn sàng cho Serial Monitor"
+                      );
+                      setSerialPort(port);
+                    }}
+                  />
+                </>
               )}
             </>
           )}
@@ -348,7 +481,7 @@ export function IDECodePanel() {
       <div className="flex flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
         {/* File Explorer Sidebar */}
         {directoryHandle && (
-          <div className="w-56 bg-gray-800 border-r border-gray-700 overflow-y-auto shrink-0 ide-scrollbar">
+          <div className="w-56 bg-gray-800 border-r border-gray-700 overflow-y-auto shrink-0 hide-scrollbar">
             <div className="p-3">
               <h3 className="text-xs font-semibold mb-2 text-gray-400 uppercase flex gap-2 items-center">
                 <Folders /> {currentDirectory} ({files.length})
@@ -388,22 +521,31 @@ export function IDECodePanel() {
               )}
               <div className="flex-1">
                 {selectedFile ? (
-                  <Editor
-                    height="100%"
-                    width="100%"
-                    value={loading ? "// Loading..." : code}
-                    onChange={(value) => setCode(value)}
-                    language={language}
-                    theme="vs-dark"
-                    onMount={onMount}
-                    options={{
-                      minimap: { enabled: true },
-                      fontSize: 13,
-                      lineNumbers: "on",
-                      scrollBeyondLastLine: false,
-                      automaticLayout: true,
-                    }}
-                  />
+                  <div className="flex flex-col w-full h-full">
+                    <div className="flex-1 h-full">
+                      <Editor
+                        height="100%"
+                        width="100%"
+                        value={loading ? "// Loading..." : code}
+                        onChange={(value) => setCode(value)}
+                        language={language}
+                        theme="vs-dark"
+                        onMount={onMount}
+                        options={{
+                          minimap: { enabled: true },
+                          fontSize: 13,
+                          lineNumbers: "on",
+                          scrollBeyondLastLine: false,
+                          automaticLayout: true,
+                        }}
+                      />
+                    </div>
+                    <IDEPanel
+                      isCompiling={isCompiling}
+                      compileSessionId={compileSessionId}
+                      serialPort={serialPort}
+                    />
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-gray-500">
                     <FileText className="w-16 h-16 mb-4 text-gray-600" />

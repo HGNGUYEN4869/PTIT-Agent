@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   setInput,
   setFile,
-  triggerRefreshHistory,
 } from "../../store/chatSlice";
 import { RootState } from "../../store/store";
 import { ChatInput } from "@/components/component/ChatInput";

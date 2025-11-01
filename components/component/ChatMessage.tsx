@@ -17,7 +17,7 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({ role, content }: ChatMessageProps) {
-  const isUser = role === MessageRole.USER;  
+  const isUser = role === MessageRole.USER;
 
   return (
     <motion.div
@@ -42,11 +42,18 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
         transformOrigin: isUser ? "right top" : "left top",
       }} // trạng thái khi unmount (với AnimatePresence)
       transition={{ duration: 0.5 }} // thời gian và easing
-      className={cn("flex w-full relative", isUser ? "justify-end" : "justify-start")}
+      className={cn(
+        "flex w-full relative",
+        isUser ? "justify-end" : "justify-start"
+      )}
     >
-      {isUser ? (<></>) : (<div className="absolute top-0 bg-[#f5f5f5] p-2 rounded-full -left-10 shadow-md">
-        <BrainCircuit className="w-4 h-4" />
-      </div>)}
+      {isUser ? (
+        <></>
+      ) : (
+        <div className="absolute top-0 bg-[#f5f5f5] p-2 rounded-full -left-10 shadow-md">
+          <BrainCircuit className="w-4 h-4" />
+        </div>
+      )}
       <Card
         className={cn(
           "px-4 py-2 rounded-2xl text-sm shadow-md",
@@ -82,7 +89,7 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeRaw, rehypeSanitize]}
               components={{
-                // ✅ Hiển thị code block có highlight
+                //  Hiển thị code block có highlight
                 code({
                   inline,
                   className,
@@ -104,7 +111,7 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
                         borderRadius: "0.5rem",
                         fontSize: "0.85rem",
                         innerWidth: "100%",
-                        overflowX: "auto", 
+                        overflowX: "auto",
                       }}
                     >
                       {String(children).replace(/\n$/, "")}
@@ -121,7 +128,7 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
                     </code>
                   );
                 },
-                // ✅ Tùy chỉnh link
+                //  Tùy chỉnh link
                 a: ({ node, ...props }) => (
                   <a
                     {...props}
@@ -130,7 +137,7 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
                     rel="noopener noreferrer"
                   />
                 ),
-                // ✅ Tùy chỉnh ảnh
+                //  Tùy chỉnh ảnh
                 img: ({ src, alt }) => (
                   <img
                     src={src ?? ""}
@@ -152,9 +159,7 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
                 ),
                 tbody: ({ children }) => <tbody>{children}</tbody>,
                 tr: ({ children }) => (
-                  <tr className="border-b border-gray-200">
-                    {children}
-                  </tr>
+                  <tr className="border-b border-gray-200">{children}</tr>
                 ),
                 th: ({ children }) => (
                   <th className="px-4 py-2 font-semibold text-left">

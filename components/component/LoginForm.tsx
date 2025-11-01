@@ -27,7 +27,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { toast } from "sonner";
 
-// ✅ Schema validation với zod
+//  Schema validation với zod
 const loginSchema = z.object({
   email: z.string().email("Email phải có dạng @ptit.edu.vn"),
   password: z.string().min(6, "Mật khẩu phải ít nhất 6 ký tự"),

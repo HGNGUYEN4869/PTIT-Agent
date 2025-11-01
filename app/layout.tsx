@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import { IDECodePanel } from "@/components/component/IDECodePanel";
 import { Toaster } from "@/components/ui/sonner";
+import { IDECodeModule } from "@/modules/IDECodeModule";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,7 +32,7 @@ export default function RootLayout({
       >
         <Toaster position="top-right" />
         <Providers>
-          <IDECodePanel />
+          <IDECodeModule />
           {children}
         </Providers>
       </body>

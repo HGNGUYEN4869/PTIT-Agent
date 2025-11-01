@@ -10,10 +10,10 @@ Hướng dẫn tích hợp **File System Access API** để cho phép web app **
 
 ### **File System Access API** (Chrome/Edge 86+)
 
-- ✅ User chọn folder → Cấp quyền read/write
-- ✅ Web app tạo/sửa/xóa file trong folder đó
-- ✅ File thực sự tồn tại trên máy, có thể dùng với Git, IDE khác
-- ✅ Hoạt động giống GitHub Copilot
+- User chọn folder → Cấp quyền read/write
+- Web app tạo/sửa/xóa file trong folder đó
+- File thực sự tồn tại trên máy, có thể dùng với Git, IDE khác
+- Hoạt động giống GitHub Copilot
 
 ---
 
@@ -55,11 +55,11 @@ const {
 
 IDE panel với:
 
-- ✅ File explorer sidebar
-- ✅ Monaco Editor để xem/sửa code
-- ✅ Button chọn folder, refresh, save
-- ✅ Auto detect language từ file extension
-- ✅ Syntax highlighting
+- File explorer sidebar
+- Monaco Editor để xem/sửa code
+- Button chọn folder, refresh, save
+- Auto detect language từ file extension
+- Syntax highlighting
 
 ### **4. Code Parser** (`lib/codeParser.ts`)
 
@@ -92,7 +92,7 @@ export function Button() {
 
 ---
 
-## 🔄 Workflow hoàn chỉnh
+## Workflow hoàn chỉnh
 
 ### **Bước 1: User chọn folder**
 
@@ -135,7 +135,7 @@ const operations = extractFileOperations(queryRes.data.answer);
 // Auto create/update files
 if (operations.length > 0) {
   await processBackendCode(operations);
-  alert(`✅ Đã tạo ${operations.length} file(s)!`);
+  alert(` Đã tạo ${operations.length} file(s)!`);
 }
 ```
 
@@ -161,12 +161,12 @@ export default function ChatPage() {
 
     const queryRes = await ragQuery(fullQueryText);
 
-    // ✅ Check Agent Mode
+    //  Check Agent Mode
     if (queryRes.data.isAgentMode !== undefined) {
       dispatch(setAgentMode(queryRes.data.isAgentMode));
     }
 
-    // ✅ Auto create/update files từ AI response
+    //  Auto create/update files từ AI response
     if (queryRes.data.isAgentMode && directoryHandle) {
       const operations = extractFileOperations(queryRes.data.answer);
 
@@ -176,9 +176,9 @@ export default function ChatPage() {
         // Notify user
         const botNotification: Message = {
           role: MessageRole.ASSISTANT,
-          content: `✅ Đã tạo/cập nhật ${
-            operations.length
-          } file(s):\n${operations.map((op) => `- ${op.path}`).join("\n")}`,
+          content: ` Đã tạo/cập nhật ${operations.length} file(s):\n${operations
+            .map((op) => `- ${op.path}`)
+            .join("\n")}`,
         };
         setMessages((prev) => [...prev, botNotification]);
       }
@@ -238,10 +238,10 @@ Backend cần trả về format phù hợp. **2 options:**
 
 ## 🔒 Security & Permissions
 
-- ✅ User **PHẢI** chọn folder manually (không thể auto access)
-- ✅ Chỉ access được folder đã chọn, không thể access toàn bộ máy
-- ✅ User có thể revoke permission bất cứ lúc nào
-- ✅ Permission chỉ tồn tại trong session (refresh page = mất quyền)
+- User **PHẢI** chọn folder manually (không thể auto access)
+- Chỉ access được folder đã chọn, không thể access toàn bộ máy
+- User có thể revoke permission bất cứ lúc nào
+- Permission chỉ tồn tại trong session (refresh page = mất quyền)
 
 ---
 
@@ -249,10 +249,10 @@ Backend cần trả về format phù hợp. **2 options:**
 
 | Browser | Support | Version |
 | ------- | ------- | ------- |
-| Chrome  | ✅ Yes  | 86+     |
-| Edge    | ✅ Yes  | 86+     |
-| Firefox | ❌ No   | -       |
-| Safari  | ❌ No   | -       |
+| Chrome  | Yes     | 86+     |
+| Edge    | Yes     | 86+     |
+| Firefox | No      | -       |
+| Safari  | No      | -       |
 
 **Fallback:** Hiện warning nếu browser không hỗ trợ
 
@@ -300,7 +300,7 @@ await processBackendCode(operations);
 
 ---
 
-## ✅ Checklist Implementation
+## Checklist Implementation
 
 - [x] `lib/fileSystemAPI.ts` - Core API functions
 - [x] `hooks/use-file-system.ts` - React hook
@@ -315,12 +315,12 @@ await processBackendCode(operations);
 
 ## 🚀 Next Steps
 
-1. ✅ Integrate `processBackendCode()` vào ChatPage
-2. ✅ Backend update response format
-3. ✅ Add file tree view (nested folders)
-4. ✅ Add Git integration (commit, push)
-5. ✅ Add terminal integration
-6. ✅ Add multi-file edit support
+1.  Integrate `processBackendCode()` vào ChatPage
+2.  Backend update response format
+3.  Add file tree view (nested folders)
+4.  Add Git integration (commit, push)
+5.  Add terminal integration
+6.  Add multi-file edit support
 
 ---
 
