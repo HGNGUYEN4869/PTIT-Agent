@@ -95,7 +95,7 @@ const HistoryChatMenu = () => {
           threads.map((thread) => (
             <SidebarMenuItem key={thread.idChat}>
               <div className="flex items-center justify-between w-full">
-                <SidebarMenuButton asChild className="!pr-2">
+                <SidebarMenuButton asChild className="pr-2!">
                   {reNameThreadId === thread.idChat ? (
                     <Input
                       type="text"
