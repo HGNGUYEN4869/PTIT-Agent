@@ -3,6 +3,8 @@
  * Chỉ hoạt động trên Chrome/Edge modern browsers
  */
 
+import { toast } from "sonner";
+
 export interface FileSystemAPI {
   selectDirectory: () => Promise<FileSystemDirectoryHandle | null>;
   createFile: (
@@ -31,24 +33,19 @@ export interface FileSystemAPI {
  */
 export async function selectDirectory(): Promise<FileSystemDirectoryHandle | null> {
   try {
-    // @ts-ignore - File System Access API
+    // @ts-expect-error - File System Access API
     if (!window.showDirectoryPicker) {
-      console.error("File System Access API not supported in this browser");
-      alert(
-        "Trình duyệt của bạn không hỗ trợ tính năng này. Vui lòng sử dụng Chrome hoặc Edge."
-      );
+      toast.error("Trình duyệt của bạn không hỗ trợ File System Access API.");
       return null;
     }
 
-    // @ts-ignore
+    // @ts-expect-error - showDirectoryPicker is not in TypeScript types yet
     const dirHandle = await window.showDirectoryPicker({
       mode: "readwrite", // Cho phép đọc và ghi
     });
-
-    console.log("Directory selected:", dirHandle.name);
     return dirHandle;
   } catch (error) {
-    console.error("User cancelled directory selection or error:", error);
+    console.error(`User cancelled directory selection or error: ${error}`);
     return null;
   }
 }
@@ -76,9 +73,9 @@ export async function createFile(
     // Đóng stream
     await writable.close();
 
-    console.log(` File created: ${fileName}`);
+    toast.success(`File created: ${fileName}`);
   } catch (error) {
-    console.error(`Error creating file ${fileName}:`, error);
+    toast.error(`Error creating file ${fileName}: ${error}`);
     throw error;
   }
 }
@@ -108,11 +105,9 @@ export async function readFile(
 
     // Đọc nội dung
     const content = await file.text();
-
-    console.log(`📖 File read: ${filePath}`);
     return content;
   } catch (error) {
-    console.error(`Error reading file ${filePath}:`, error);
+    toast.error(`Error reading file ${filePath}: ${error}`);
     throw error;
   }
 }
@@ -146,10 +141,8 @@ export async function updateFile(
 
     // Đóng stream
     await writable.close();
-
-    console.log(`✏️ File updated: ${filePath}`);
   } catch (error) {
-    console.error(`Error updating file ${filePath}:`, error);
+    toast.error(`Error updating file ${filePath}: ${error}`);
     throw error;
   }
 }
@@ -163,43 +156,107 @@ export async function listFiles(
   const files: string[] = [];
 
   try {
-    // @ts-ignore
+    // @ts-expect-error - values() async iterator not in TypeScript types
     for await (const entry of dirHandle.values()) {
       if (entry.kind === "file") {
         files.push(entry.name);
       }
     }
-
-    console.log(`📋 Files found: ${files.length}`);
     return files;
   } catch (error) {
-    console.error("Error listing files:", error);
+    toast.error(`Error listing files: ${error}`);
+    throw error;
+  }
+}
+
+/**
+ * Interface cho file/folder entry với thông tin lazy loading
+ */
+export interface FileSystemEntry {
+  name: string;
+  path: string;
+  kind: "file" | "directory";
+  handle?: FileSystemDirectoryHandle; // Chỉ có với directory
+}
+
+/**
+ * List entries (files + folders) ở 1 level - Lazy Loading approach
+ * Trả về cả files và folders, user tự quyết định khi nào expand folder
+ */
+export async function listDirectoryEntries(
+  dirHandle: FileSystemDirectoryHandle,
+  basePath: string = ""
+): Promise<FileSystemEntry[]> {
+  const entries: FileSystemEntry[] = [];
+
+  try {
+    // @ts-expect-error - values() async iterator not in TypeScript types
+    for await (const entry of dirHandle.values()) {
+      const fullPath = basePath ? `${basePath}/${entry.name}` : entry.name;
+
+      entries.push({
+        name: entry.name,
+        path: fullPath,
+        kind: entry.kind,
+        handle: entry.kind === "directory" ? entry : undefined,
+      });
+    }
+
+    return entries;
+  } catch (error) {
+    toast.error(`Error listing directory entries: ${error}`);
     throw error;
   }
 }
 
 /**
  * Liệt kê TẤT CẢ files đệ quy, bao gồm nested folders
+ * Optimized: Stack-based + Parallel processing (BFS approach)
  * Trả về danh sách paths như: ["src/App.tsx", "components/Button.tsx"]
+ * NOTE: Chỉ dùng khi cần load toàn bộ cây thư mục 1 lần
  */
 export async function listFilesRecursive(
   dirHandle: FileSystemDirectoryHandle,
   basePath: string = ""
 ): Promise<string[]> {
   const files: string[] = [];
+  const stack: { handle: FileSystemDirectoryHandle; path: string }[] = [
+    { handle: dirHandle, path: basePath },
+  ];
 
   try {
-    // @ts-ignore
-    for await (const entry of dirHandle.values()) {
-      const fullPath = basePath ? `${basePath}/${entry.name}` : entry.name;
+    while (stack.length > 0) {
+      // Lấy tất cả items trong stack hiện tại để xử lý song song
+      const batchSize = stack.length;
+      const batch = stack.splice(0, batchSize);
 
-      if (entry.kind === "file") {
-        files.push(fullPath);
-      } else if (entry.kind === "directory") {
-        // Đệ quy vào folder con
-        const subFiles = await listFilesRecursive(entry, fullPath);
-        files.push(...subFiles);
-      }
+      // Xử lý song song từng batch (theo level)
+      const promises = batch.map(async ({ handle, path }) => {
+        const results: { handle: FileSystemDirectoryHandle; path: string }[] =
+          [];
+        const localFiles: string[] = [];
+
+        // @ts-expect-error - values() async iterator not in TypeScript types
+        for await (const entry of handle.values()) {
+          const fullPath = path ? `${path}/${entry.name}` : entry.name;
+
+          if (entry.kind === "file") {
+            localFiles.push(fullPath);
+          } else if (entry.kind === "directory") {
+            results.push({ handle: entry, path: fullPath });
+          }
+        }
+
+        return { files: localFiles, dirs: results };
+      });
+
+      const batchResults = await Promise.all(promises);
+
+      // Thu thập kết quả
+      batchResults.forEach(({ files: localFiles, dirs }) => {
+        files.push(...localFiles);
+        stack.push(...dirs);
+      });
     }
 
     return files;

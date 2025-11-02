@@ -362,9 +362,10 @@ export class ArduinoFlasher {
 
         flashed = true;
         break; //  thành công, thoát vòng lặp
-      } catch (err: any) {
-        console.error(`Flash failed at baud ${baud}:`, err);
-        if (err.message?.includes("Timeout") || err.message?.includes("sync")) {
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        toast.error(`Flash failed at baud ${baud}: ${error.message}`);
+        if (error.message?.includes("Timeout") || error.message?.includes("sync")) {
           this.onProgress?.({
             percentage: 0,
             message: `Timeout tại baud ${baud}, thử baud khác...`,

@@ -8,8 +8,10 @@ import {
   updateFile,
   listFiles,
   listFilesRecursive,
+  listDirectoryEntries,
   deleteFile,
   createNestedFile,
+  type FileSystemEntry,
 } from "@/lib/fileSystemAPI";
 
 export interface FileSystemState {
@@ -17,6 +19,7 @@ export interface FileSystemState {
   isSupported: boolean;
   files: string[];
   currentDirectory: string;
+  entries: FileSystemEntry[]; // Lazy loading entries
 }
 
 export function useFileSystem() {
@@ -26,6 +29,7 @@ export function useFileSystem() {
       typeof window !== "undefined" && "showDirectoryPicker" in window,
     files: [],
     currentDirectory: "",
+    entries: [],
   });
 
   /**
@@ -40,10 +44,30 @@ export function useFileSystem() {
         currentDirectory: handle.name,
       }));
 
-      // Auto load file list
-      await loadFileList(handle);
+      // Auto load entries (lazy loading - chỉ 1 level)
+      await loadDirectoryEntries(handle);
     }
   }, []);
+
+  /**
+   * Load entries của 1 directory (Lazy Loading - chỉ 1 level)
+   */
+  const loadDirectoryEntries = useCallback(
+    async (handle?: FileSystemDirectoryHandle, basePath?: string) => {
+      const dirHandle = handle || state.directoryHandle;
+      if (!dirHandle) return [];
+
+      const entries = await listDirectoryEntries(dirHandle, basePath);
+
+      if (!basePath) {
+        // Root level - update state
+        setState((prev) => ({ ...prev, entries }));
+      }
+
+      return entries;
+    },
+    [state.directoryHandle]
+  );
 
   /**
    * Load danh sách files (RECURSIVE - lấy tất cả files trong nested folders)
@@ -335,6 +359,7 @@ export function useFileSystem() {
     ...state,
     selectWorkingDirectory,
     loadFileList,
+    loadDirectoryEntries,
     createFileFromCode,
     createNestedFileFromCode,
     readFileContent,

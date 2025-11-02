@@ -40,9 +40,9 @@ export default function RegisterForm() {
   const [loading, setLoading] = useState<boolean>(false);
   const dispatch = useDispatch();
   const router = useRouter();
-  const { isAuthenticated, userId, username } = useSelector(
-    (state: RootState) => state.auth
-  );
+  // const { isAuthenticated, userId, username } = useSelector(
+  //   (state: RootState) => state.auth
+  // );
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(loginSchema),
@@ -68,8 +68,9 @@ export default function RegisterForm() {
         setLoading(false);
         router.push("/");
       }
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.error || "Đăng ký thất bại";
+    } catch (error) {
+      const err = error as { response?: { data?: { error?: string } } };
+      const errorMessage = err?.response?.data?.error || "Đăng ký thất bại";
       toast.error(errorMessage);
       setLoading(false);
     }

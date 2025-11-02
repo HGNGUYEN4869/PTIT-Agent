@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Terminal } from "../ui/terminal";
 import { useWebSocketLogs } from "@/hooks/useWebSocketLogs";
 
@@ -16,13 +16,6 @@ const IDETerminal = ({ sessionId }: IDETerminalProps) => {
       : null;
 
   const logs = useWebSocketLogs(wsUrl);
-  // const containerRef = useRef<HTMLDivElement>(null);
-
-  // useEffect(() => {
-  //   if (containerRef.current) {
-  //     containerRef.current.scrollTop = containerRef.current.scrollHeight;
-  //   }
-  // }, [logs]);
 
   // Gửi lệnh đi
   const handleSubmit = (e: React.FormEvent) => {
@@ -48,7 +41,7 @@ const IDETerminal = ({ sessionId }: IDETerminalProps) => {
         return (
           <div key={i} className={`flex w-full overflow-hidden ${color}`}>
             <span className="shrink-0 pr-2">❯</span>
-            <span className="whitespace-pre-wrap break-words flex-1 min-w-0">
+            <span className="whitespace-pre-wrap wrap-break-words flex-1 min-w-0">
               {log.message.trim()}
             </span>
           </div>

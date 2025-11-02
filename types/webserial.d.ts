@@ -10,6 +10,11 @@ interface SerialOptions {
   baudRate: number;
 }
 
+interface SerialPortFilter {
+  usbVendorId?: number;
+  usbProductId?: number;
+}
+
 interface SerialPort {
   open(options: SerialOptions): Promise<void>;
   close(): Promise<void>;
@@ -20,7 +25,7 @@ interface SerialPort {
 
 interface Navigator {
   serial: {
-    requestPort(options?: { filters: any[] }): Promise<SerialPort>;
+    requestPort(options?: { filters: SerialPortFilter[] }): Promise<SerialPort>;
     getPorts(): Promise<SerialPort[]>;
   };
 }
@@ -34,6 +39,8 @@ interface USBDevice {
 interface Navigator {
   usb: {
     getDevices(): Promise<USBDevice[]>;
-    requestDevice(options: { filters: { vendorId: number }[] }): Promise<USBDevice>;
+    requestDevice(options: {
+      filters: { vendorId: number }[];
+    }): Promise<USBDevice>;
   };
 }

@@ -46,7 +46,7 @@ export class ESP32Flasher {
     this.config = {
       name: config?.name ?? "ESP32",
       baudRate: config?.baudRate ?? 115200,
-      flashSize: (config?.flashSize as any) ?? "4MB",
+      flashSize: (config?.flashSize ?? "4MB") as ESP32Config["flashSize"],
     };
   }
 
@@ -63,7 +63,7 @@ export class ESP32Flasher {
       });
 
       // Initialize transport
-      this.transport = new Transport(this.port as any, true);
+      this.transport = new Transport(this.port, true);
 
       // Initialize ESPLoader with all required options
       this.esploader = new ESPLoader({
@@ -100,12 +100,11 @@ export class ESP32Flasher {
       if (chipName.includes("ESP32") && !chipName.includes("ESP8266")) {
         try {
           await this.esploader.changeBaud();
-          console.log("Baud rate changed for faster flashing");
         } catch (err) {
-          console.warn("Failed to change baud rate, using default");
+          toast.warning("Không thể thay đổi baud rate, sẽ sử dụng mặc định");
         }
       } else {
-        console.log("Keeping default baud rate for ESP8266");
+        toast.info("Giữ nguyên baud rate mặc định cho ESP8266");
       }
 
       this.onProgress?.({
@@ -154,8 +153,8 @@ export class ESP32Flasher {
       try {
         await this.esploader.softReset(false); // false = không ở lại bootloader
         console.log("ESP soft reset completed");
-      } catch (resetErr) {
-        console.warn("Soft reset failed:", resetErr);
+      } catch {
+        console.warn("Soft reset failed");
         // Không throw error vì firmware đã được flash thành công
         // User có thể reset thủ công bằng nút RESET trên board
       }
@@ -166,11 +165,12 @@ export class ESP32Flasher {
       });
 
       console.log("ESP32/ESP8266 flash completed successfully");
-    } catch (error: any) {
+    } catch (error) {
       console.error("ESP32 flash error:", error);
 
       // Kiểm tra lỗi cụ thể và đưa ra gợi ý
-      let errorMessage = error.message || "Lỗi không xác định";
+      let errorMessage =
+        error instanceof Error ? error.message : "Lỗi không xác định";
 
       if (errorMessage.includes("No serial data received")) {
         errorMessage =

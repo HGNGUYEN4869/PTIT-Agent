@@ -39,9 +39,9 @@ export default function LoginForm() {
   const [loading, setLoading] = useState<boolean>(false);
   const dispatch = useDispatch();
   const router = useRouter();
-  const { isAuthenticated, userId, username } = useSelector(
-    (state: RootState) => state.auth
-  );
+  // const { isAuthenticated, userId, username } = useSelector(
+  //   (state: RootState) => state.auth
+  // );
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -66,8 +66,9 @@ export default function LoginForm() {
         setLoading(false);
         router.push("/");
       }
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.error || "Đăng nhập thất bại";
+    } catch (error) {
+      const err = error as { response?: { data?: { error?: string } } };
+      const errorMessage = err?.response?.data?.error || "Đăng nhập thất bại";
       toast.error(errorMessage);
       setLoading(false);
     }

@@ -10,6 +10,7 @@ import {
 } from "@/app/api/arduinoCompile";
 import { ArduinoFlasher, SerialPort } from "@/lib/ArduinoFlasher";
 import { ESP32Flasher } from "@/lib/ESP32Flasher";
+import { motion } from "framer-motion";
 
 type FlashAllBoardsProps = {
   sessionId?: string; // Session ID từ compile step
@@ -34,7 +35,7 @@ export default function FlashAllBoards({
 
     // Serial (UNO, ESP32, )
     try {
-      const port = (await navigator.serial.requestPort()) as any as SerialPort;
+      const port = (await navigator.serial.requestPort()) as SerialPort;
 
       //Đảm bảo port được đóng hoàn toàn trước khi detect
       if (port.readable || port.writable) {
@@ -95,9 +96,10 @@ export default function FlashAllBoards({
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       return { type: boardType, port };
-    } catch (error: any) {
-      console.error("Detect board error:", error);
-      toast.error(`Không tìm thấy board: ${error.message}`);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      console.error("Detect board error:", err);
+      toast.error(`Không tìm thấy board: ${err.message}`);
       throw new Error("Không tìm thấy board nào!");
     }
   }
@@ -155,9 +157,10 @@ export default function FlashAllBoards({
 
         onFlashComplete(port);
       }
-    } catch (error: any) {
-      console.error("Flash UNO error:", error);
-      toast.error(`Lỗi nạp code: ${error.message || error}`);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      console.error("Flash UNO error:", err);
+      toast.error(`Lỗi nạp code: ${err.message || String(err)}`);
       throw error;
     }
   }
@@ -205,11 +208,12 @@ export default function FlashAllBoards({
         await new Promise((resolve) => setTimeout(resolve, 2000));
         onFlashComplete(port);
       }
-    } catch (error: any) {
-      console.error("Flash ESP32/ESP8266 error:", error);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      console.error("Flash ESP32/ESP8266 error:", err);
 
       // Hiển thị hướng dẫn chi tiết dựa vào loại lỗi
-      const errorMsg = error.message || error.toString();
+      const errorMsg = err.message || err.toString();
 
       if (errorMsg.includes("Failed to communicate with the flash chip")) {
         ESP32Flasher.showFlashChipTroubleshooting();
@@ -267,21 +271,34 @@ export default function FlashAllBoards({
 
       toast.info("STM32 - Đang nạp firmware mode DFU...");
 
-      // @ts-ignore: WebUSB experimental
       const device = await navigator.usb.requestDevice({
         filters: [{ vendorId: 0x0483 }],
       });
-      await (device as any).open();
-      if ((device as any).configuration === null)
-        await (device as any).selectConfiguration(1);
-      await (device as any).claimInterface(0);
+
+      const usbDevice = device as USBDevice & {
+        open: () => Promise<void>;
+        configuration: unknown;
+        selectConfiguration: (configurationValue: number) => Promise<void>;
+        claimInterface: (interfaceNumber: number) => Promise<void>;
+        transferOut: (
+          endpointNumber: number,
+          data: Uint8Array
+        ) => Promise<unknown>;
+        close: () => Promise<void>;
+      };
+
+      await usbDevice.open();
+      if (usbDevice.configuration === null)
+        await usbDevice.selectConfiguration(1);
+      await usbDevice.claimInterface(0);
 
       // Gửi firmware qua endpoint 0
-      await (device as any).transferOut(0x01, new Uint8Array(firmware));
-      await (device as any).close();
+      await usbDevice.transferOut(0x01, new Uint8Array(firmware));
+      await usbDevice.close();
       toast.success("Nạp hoàn tất cho STM32!");
-    } catch (error: any) {
-      toast.error(`Lỗi tải firmware: ${error.message}`);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      toast.error(`Lỗi tải firmware: ${err.message}`);
       throw error;
     }
   }
@@ -298,12 +315,11 @@ export default function FlashAllBoards({
         if (boardType === "STM32") {
           board = { type: "STM32" };
         } else {
-          if(boardType === "ESP32" || boardType === "ESP8266"){
-            ESP32Flasher.enterBootloaderMode()
+          if (boardType === "ESP32" || boardType === "ESP8266") {
+            ESP32Flasher.enterBootloaderMode();
           }
           // UNO hoặc ESP32 cần serial port
-          const port =
-            (await navigator.serial.requestPort()) as any as SerialPort;
+          const port = (await navigator.serial.requestPort()) as SerialPort;
           board = { type: boardType, port };
         }
         toast.success(`Sử dụng board đã chọn: ${boardType}`);
@@ -320,8 +336,9 @@ export default function FlashAllBoards({
         await flashESP32(board.port);
       else if (board.type === "STM32") await flashSTM32();
       else toast.error("Board không được hỗ trợ nạp tự động!");
-    } catch (err: any) {
-      toast.error(`Lỗi nạp code: ${err.message}`);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      toast.error(`Lỗi nạp code: ${error.message}`);
     } finally {
       setIsFlashing(false);
     }
@@ -334,8 +351,30 @@ export default function FlashAllBoards({
         onClick={handleFlash}
         size="sm"
         title={!sessionId ? "Vui lòng compile code trước" : ""}
+        className="bg-[#252525] hover:bg-[#313131] text-white"
       >
-        {isFlashing ? "Đang nạp..." : "Nạp Code"}
+        {isFlashing ? (
+          <>
+            <span>Đang nạp</span>
+            {[0, 1, 2].map((i) => (
+              <motion.span
+                key={i}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 1, 0] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 1.2,
+                  delay: i * 0.25, // mỗi chấm trễ thêm 0.3s
+                  ease: "easeInOut",
+                }}
+              >
+                .
+              </motion.span>
+            ))}
+          </>
+        ) : (
+          "Nạp Code"
+        )}
       </Button>
     </div>
   );

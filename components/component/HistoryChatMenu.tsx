@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Edit3, MoreHorizontal, Trash2, X } from "lucide-react";
-import { Chat, HistoryChat } from "@/types/chat";
+import { HistoryChat } from "@/types/chat";
 import {
   changeTitleChat,
   deleteChat,
@@ -70,7 +70,7 @@ const HistoryChatMenu = () => {
     try {
       const data: HistoryChat = await getHistoryChat();
       setThreads(data);
-    } catch (error) {
+    } catch {
       toast.error("Error fetching chat history");
     } finally {
       setLoading(false);
@@ -133,7 +133,8 @@ const HistoryChatMenu = () => {
                   <Button
                     variant="ghost"
                     onClick={() => {
-                      setRenameThreadId(undefined), setNewThreadName(undefined);
+                      setRenameThreadId(undefined);
+                      setNewThreadName(undefined);
                     }}
                   >
                     <X />

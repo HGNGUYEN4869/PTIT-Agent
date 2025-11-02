@@ -22,7 +22,7 @@ const IDEPanel = ({ compileSessionId, serialPort, isCompiling }: IDEPanelProps) 
   }, [isCompiling]);
   return (
     <>
-      <div className="flex w-full flex-col gap-6">
+      <div className="flex w-full flex-col gap-6 border-t border-gray-700">
         <Tabs className="w-full gap-0"
         value={activeTab} 
         onValueChange={setActiveTab}

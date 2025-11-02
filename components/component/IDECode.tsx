@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFileSystem } from "@/hooks/use-file-system";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
+import type { FileSystemEntry } from "@/lib/fileSystemAPI";
 import {
   Folder,
   FileText,
@@ -29,6 +30,7 @@ import IDEPanel from "./IDEPanel";
 import FlashAllBoards from "./FlashBoard";
 import { compileArduino } from "@/app/api/arduinoCompile";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 // Danh sách các board được hỗ trợ
 const SUPPORTED_BOARDS = [
@@ -44,6 +46,7 @@ const SUPPORTED_BOARDS = [
 
 export function IDECode() {
   const { isAgentMode } = useSelector((state: RootState) => state.chat);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const editorRef = useRef<any>(null);
   const [code, setCode] = useState<string | undefined>(undefined);
   const [language, setLanguage] = useState("typescript");
@@ -62,22 +65,46 @@ export function IDECode() {
     isSupported,
     directoryHandle,
     currentDirectory,
-    files,
+    // files,
+    entries,
     selectWorkingDirectory,
     loadFileList,
+    loadDirectoryEntries,
     readFileContent,
     updateFileContent,
   } = useFileSystem();
 
   const [selectedFile, setSelectedFile] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set()
-  );
+  const [expandedFolders, setExpandedFolders] = useState<
+    Map<string, FileSystemEntry[]>
+  >(new Map());
   const [isSaving, setIsSaving] = useState(false);
 
   // Debounce code để auto-save sau 2s không thay đổi
   const debouncedCode = useDebounce(code, 2000);
+
+  // Lazy load folder contents khi expand
+  const toggleFolder = async (folderPath: string, entry: FileSystemEntry) => {
+    if (!entry.handle) return;
+
+    if (expandedFolders.has(folderPath)) {
+      // Collapse
+      setExpandedFolders((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(folderPath);
+        return newMap;
+      });
+    } else {
+      // Expand - load children
+      const children = await loadDirectoryEntries(entry.handle, folderPath);
+      setExpandedFolders((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(folderPath, children);
+        return newMap;
+      });
+    }
+  };
 
   // Auto-save khi debouncedCode thay đổi
   useEffect(() => {
@@ -105,69 +132,35 @@ export function IDECode() {
     autoSave();
   }, [debouncedCode, selectedFile, loading, updateFileContent]);
 
-  // Tạo cấu trúc tree từ flat file list
-  const buildFileTree = (files: string[]) => {
-    const tree: Record<string, any> = {};
+  // Render tree với lazy loading
+  const renderTree = (entries: FileSystemEntry[], level: number = 0) => {
+    return entries.map((entry) => {
+      const isExpanded = expandedFolders.has(entry.path);
+      const children = expandedFolders.get(entry.path);
 
-    files.forEach((filePath) => {
-      const parts = filePath.split("/");
-      let current = tree;
-
-      parts.forEach((part, index) => {
-        if (!current[part]) {
-          current[part] = index === parts.length - 1 ? null : {};
-        }
-        if (index < parts.length - 1) {
-          current = current[part];
-        }
-      });
-    });
-
-    return tree;
-  };
-
-  const fileTree = buildFileTree(files);
-
-  const toggleFolder = (folderPath: string) => {
-    setExpandedFolders((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(folderPath)) {
-        newSet.delete(folderPath);
-      } else {
-        newSet.add(folderPath);
-      }
-      return newSet;
-    });
-  };
-
-  // Render tree recursively
-  const renderTree = (tree: Record<string, any>, basePath: string = "") => {
-    return Object.entries(tree).map(([name, children]) => {
-      const fullPath = basePath ? `${basePath}/${name}` : name;
-      const isFile = children === null;
-      const isExpanded = expandedFolders.has(fullPath);
-
-      if (isFile) {
+      if (entry.kind === "file") {
         return (
           <button
-            key={fullPath}
-            onClick={() => handleFileClick(fullPath)}
-            className={`w-full text-left px-2 py-1.5 pl-6 rounded text-xs flex items-center gap-2 transition-colors ${
-              selectedFile === fullPath
+            key={entry.path}
+            onClick={() => handleFileClick(entry.path)}
+            className={`w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 transition-colors ${
+              selectedFile === entry.path
                 ? "bg-blue-600 text-white"
                 : "hover:bg-gray-700 text-gray-300"
             }`}
+            style={{ paddingLeft: `${(level + 1) * 12 + 8}px` }}
           >
             <FileText className="w-3 h-3 shrink-0" />
-            <span className="truncate">{name}</span>
+            <span className="truncate">{entry.name}</span>
           </button>
         );
       } else {
         return (
-          <div key={fullPath}>
+          <div key={entry.path}>
             <button
-              onClick={() => toggleFolder(fullPath)}
-              className="w-full text-left px-2 py-1.5 pl-4 rounded text-xs flex items-center gap-1 hover:bg-gray-700 text-gray-400 transition-colors"
+              onClick={() => toggleFolder(entry.path, entry)}
+              className="w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-1 hover:bg-gray-700 text-gray-400 transition-colors"
+              style={{ paddingLeft: `${level * 12 + 8}px` }}
             >
               {isExpanded ? (
                 <ChevronDown className="w-3 h-3 shrink-0" />
@@ -175,10 +168,10 @@ export function IDECode() {
                 <ChevronRight className="w-3 h-3 shrink-0" />
               )}
               <Folder className="w-3 h-3 shrink-0" />
-              <span className="truncate font-medium">{name}</span>
+              <span className="truncate font-medium">{entry.name}</span>
             </button>
-            {isExpanded && (
-              <div className="ml-2">{renderTree(children, fullPath)}</div>
+            {isExpanded && children && (
+              <div>{renderTree(children, level + 1)}</div>
             )}
           </div>
         );
@@ -186,6 +179,7 @@ export function IDECode() {
     });
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
     editor.focus();
@@ -371,12 +365,18 @@ export function IDECode() {
 
       toast.info(`Đang compile ${file.name}...`);
 
-      const data = await compileArduino(file, newSessionId, selectedBoard);
+      await compileArduino(file, newSessionId, selectedBoard);
 
       toast.success(`Compile thành công!`);
-    } catch (err: any) {
-      console.error("Compile error:", err);
-      toast.error(`Lỗi compile: ${err.response?.data?.error || err.message}`);
+    } catch (err) {
+      const error = err as {
+        response?: { data?: { error?: string } };
+        message?: string;
+      };
+      console.error("Compile error:", error);
+      toast.error(
+        `Lỗi compile: ${error.response?.data?.error || error.message}`
+      );
       // Clear sessionId nếu compile fail
       setCompileSessionId("");
     } finally {
@@ -387,9 +387,9 @@ export function IDECode() {
   if (!isAgentMode) return null;
 
   return (
-    <div className="fixed left-0 top-0 w-[75vw] h-screen bg-gray-900 flex flex-col overflow-hidden">
+    <div className="fixed left-0 top-0 w-[75vw] h-screen bg-[#101010] flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="border-b border-gray-700 p-3 flex items-center justify-between bg-gray-800 shrink-0">
+      <div className="border-b border-gray-700 p-3 flex items-center justify-between bg-[#101010] shrink-0">
         <h1 className="text-sm font-bold text-white flex items-center gap-2">
           <LaptopMinimal /> IDE Code Editor
         </h1>
@@ -408,7 +408,7 @@ export function IDECode() {
             <Button
               onClick={selectWorkingDirectory}
               size="sm"
-              className="gap-2"
+              className="gap-2 bg-[#252525] hover:bg-[#313131]"
             >
               <Folder className="w-4 h-4" />
               Chọn thư mục
@@ -435,7 +435,7 @@ export function IDECode() {
                         value={selectedBoard}
                         onValueChange={setSelectedBoard}
                       >
-                        <SelectTrigger className="w-[200px] h-9 bg-gray-700 border-gray-600 text-white text-xs">
+                        <SelectTrigger className="w-[200px] h-9 bg-[#252525] border-[#444444] text-white text-xs">
                           <SelectValue placeholder="Chọn board" />
                         </SelectTrigger>
                         <SelectContent>
@@ -453,7 +453,28 @@ export function IDECode() {
                         disabled={isCompiling}
                         className="gap-1 bg-orange-600 hover:bg-orange-700"
                       >
-                        {isCompiling ? "Đang compile..." : "Compile"}
+                        {isCompiling ? (
+                          <>
+                            <span>Đang compile</span>
+                            {[0, 1, 2].map((i) => (
+                              <motion.span
+                                key={i}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: [0, 1, 0] }}
+                                transition={{
+                                  repeat: Infinity,
+                                  duration: 1.2,
+                                  delay: i * 0.25, // mỗi chấm trễ thêm 0.3s
+                                  ease: "easeInOut",
+                                }}
+                              >
+                                .
+                              </motion.span>
+                            ))}
+                          </>
+                        ) : (
+                          "Compile"
+                        )}
                       </Button>
                     </>
                   )}
@@ -480,16 +501,16 @@ export function IDECode() {
       <div className="flex flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
         {/* File Explorer Sidebar */}
         {directoryHandle && (
-          <div className="w-56 bg-gray-800 border-r border-gray-700 overflow-y-auto shrink-0 hide-scrollbar">
+          <div className="w-56 bg-[#101010] border-r border-gray-700 overflow-y-auto shrink-0 hide-scrollbar">
             <div className="p-3">
               <h3 className="text-xs font-semibold mb-2 text-gray-400 uppercase flex gap-2 items-center">
-                <Folders /> {currentDirectory} ({files.length})
+                <Folders /> {currentDirectory} ({entries.length})
               </h3>
               <div className="space-y-1">
-                {files.length === 0 ? (
+                {entries.length === 0 ? (
                   <p className="text-xs text-gray-500 py-2">Không có file</p>
                 ) : (
-                  renderTree(fileTree)
+                  renderTree(entries)
                 )}
               </div>
             </div>
@@ -499,8 +520,8 @@ export function IDECode() {
         {/* Monaco Editor Area */}
         <div className="flex-1 overflow-hidden">
           {!directoryHandle ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-500 bg-gray-900">
-              <Folder className="w-16 h-16 mb-4 text-gray-600" />
+            <div className="flex flex-col items-center justify-center h-full text-white bg-[url('/frame-background.png')] bg-cover">
+              <Folder className="w-16 h-16 mb-4 text-white" />
               <p className="text-lg mb-2">Chọn thư mục để bắt đầu</p>
               <p className="text-sm text-center px-4">
                 AI sẽ tự động tạo và sửa file trong thư mục bạn chọn
@@ -509,7 +530,7 @@ export function IDECode() {
           ) : (
             <div className="h-full flex flex-col">
               {selectedFile && (
-                <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 shrink-0">
+                <div className="bg-[#101010] px-4 py-2 border-b border-gray-700 shrink-0">
                   <span className="font-mono text-xs text-blue-400">
                     {selectedFile}
                   </span>

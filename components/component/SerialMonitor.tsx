@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { Terminal } from "../ui/terminal";
-import { Send, Power, Trash2 } from "lucide-react";
+import { Power, Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -21,7 +21,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
   const [logs, setLogs] = useState<string[]>([]);
   const [input, setInput] = useState("");
   const [isConnected, setIsConnected] = useState(false);
-  const [baudRate, setBaudRate] = useState(115200);
+  const [baudRate, setBaudRate] = useState(9600);
   const scrollRef = useRef<HTMLDivElement>(null);
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(
     null
@@ -56,7 +56,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
 
         // Đợi một chút để port được giải phóng hoàn toàn
         await new Promise((resolve) => setTimeout(resolve, 300));
-      } catch (closeError) {
+      } catch {
         // Port có thể đã đóng rồi, tiếp tục mở port
       }
 
@@ -64,11 +64,17 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
 
       // Tắt DTR/RTS signals để tránh ESP32 bị auto-reset
       try {
-        await (serialPort as any).setSignals({
+        const portWithSignals = serialPort as SerialPort & {
+          setSignals: (signals: {
+            dataTerminalReady?: boolean;
+            requestToSend?: boolean;
+          }) => Promise<void>;
+        };
+        await portWithSignals.setSignals({
           dataTerminalReady: false, // DTR = LOW
           requestToSend: false, // RTS = LOW
         });
-      } catch (signalErr) {
+      } catch {
         // Board không hỗ trợ signal control, bỏ qua
       }
 
@@ -77,8 +83,9 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
 
       // Bắt đầu đọc data
       startReading();
-    } catch (error: any) {
-      toast.error(`Lỗi kết nối: ${error.message}`);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      toast.error(`Lỗi kết nối: ${err.message}`);
       setIsConnected(false);
     }
   };
@@ -100,36 +107,38 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
           setLogs((prev) => [...prev, text]);
         }
       }
-    } catch (error: any) {
-      if (!error.message.includes("device has been lost")) {
-        toast.error(`Lỗi đọc dữ liệu: ${error.message}`);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      if (!err.message.includes("device has been lost")) {
+        toast.error(`Lỗi đọc dữ liệu: ${err.message}`);
       }
     } finally {
       readerRef.current?.releaseLock();
     }
   };
 
-  // Gửi data tới Arduino
-  const sendData = async () => {
-    if (!serialPort || !serialPort.writable || !input.trim()) return;
+  // Gửi data tới Arduino (hiện tại chưa sử dụng)
+  // const sendData = async () => {
+  //   if (!serialPort || !serialPort.writable || !input.trim()) return;
 
-    try {
-      if (!writerRef.current) {
-        writerRef.current = serialPort.writable.getWriter();
-      }
+  //   try {
+  //     if (!writerRef.current) {
+  //       writerRef.current = serialPort.writable.getWriter();
+  //     }
 
-      const encoder = new TextEncoder();
-      const data = encoder.encode(input + "\n");
-      await writerRef.current.write(data);
+  //     const encoder = new TextEncoder();
+  //     const data = encoder.encode(input + "\n");
+  //     await writerRef.current.write(data);
 
-      setLogs((prev) => [...prev, `> ${input}\n`]);
-      setInput("");
-    } catch (error: any) {
-      toast.error(`Lỗi gửi dữ liệu: ${error.message}`);
-      writerRef.current?.releaseLock();
-      writerRef.current = null;
-    }
-  };
+  //     setLogs((prev) => [...prev, `> ${input}\n`]);
+  //     setInput("");
+  //   } catch (error) {
+  //     const err = error instanceof Error ? error : new Error(String(error));
+  //     toast.error(`Lỗi gửi dữ liệu: ${err.message}`);
+  //     writerRef.current?.releaseLock();
+  //     writerRef.current = null;
+  //   }
+  // };
 
   // Ngắt kết nối
   const disconnect = async () => {
@@ -154,7 +163,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
 
       setIsConnected(false);
       toast.info("Đã ngắt kết nối Serial Monitor");
-    } catch (error: any) {
+    } catch {
       toast.error("Lỗi khi ngắt kết nối");
     }
   };
@@ -175,9 +184,8 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
   return (
     <div className="flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-2 border-b border-gray-700 bg-gray-800">
-        <h3 className="text-sm font-semibold text-white">📡 Serial Monitor</h3>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between p-2 border-t border-gray-700 bg-[#1e1e1e]">
+        <div className="flex items-center gap-2 w-full justify-end">
           <Select
             value={baudRate.toString()}
             onValueChange={(value) => setBaudRate(Number(value))}
@@ -185,7 +193,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
           >
             <SelectTrigger
               size="sm"
-              className="w-fit bg-gray-700 border-gray-600 text-white"
+              className="w-fit bg-[#252525] border-[#444444] text-white"
             >
               <SelectValue />
             </SelectTrigger>
