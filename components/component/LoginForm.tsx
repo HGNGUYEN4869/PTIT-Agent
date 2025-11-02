@@ -25,8 +25,9 @@ import { RootState } from "@/store/store";
 import { setAuth } from "@/store/authSlice";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { toast } from "sonner";
 
-// ✅ Schema validation với zod
+//  Schema validation với zod
 const loginSchema = z.object({
   email: z.string().email("Email phải có dạng @ptit.edu.vn"),
   password: z.string().min(6, "Mật khẩu phải ít nhất 6 ký tự"),
@@ -38,9 +39,9 @@ export default function LoginForm() {
   const [loading, setLoading] = useState<boolean>(false);
   const dispatch = useDispatch();
   const router = useRouter();
-  const { isAuthenticated, userId, username } = useSelector(
-    (state: RootState) => state.auth
-  );
+  // const { isAuthenticated, userId, username } = useSelector(
+  //   (state: RootState) => state.auth
+  // );
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -66,7 +67,9 @@ export default function LoginForm() {
         router.push("/");
       }
     } catch (error) {
-      console.log(error);
+      const err = error as { response?: { data?: { error?: string } } };
+      const errorMessage = err?.response?.data?.error || "Đăng nhập thất bại";
+      toast.error(errorMessage);
       setLoading(false);
     }
   };
@@ -103,7 +106,7 @@ export default function LoginForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <Mail className="w-4 h-4"/> Email
+                      <Mail className="w-4 h-4" /> Email
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Email" {...field} />
@@ -119,7 +122,9 @@ export default function LoginForm() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel><LockKeyhole className="w-4 h-4"/> Password</FormLabel>
+                    <FormLabel>
+                      <LockKeyhole className="w-4 h-4" /> Password
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="password"

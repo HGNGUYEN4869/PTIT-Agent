@@ -121,7 +121,8 @@
   }
 }
 
-.content-wrap, textarea {
+.content-wrap,
+textarea {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* Internet Explorer 10+ */
 }
@@ -134,15 +135,48 @@ textarea::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Edge */
 }
 
-.prose h1, .prose h2, .prose h3 {
+.prose h1,
+.prose h2,
+.prose h3 {
   margin: 0.5em 0;
 }
-.prose p{
+.prose p {
   margin: 0.25em 0;
 }
-.prose ul, .prose ol {
+.prose ul,
+.prose ol {
   margin: 0.25em 0 0.25em 1.5em;
 }
 .prose th {
   margin-top: 0.5em;
+}
+
+/* Custom scrollbar cho IDE Panel */
+.hide-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.none-scrollbar::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+.hide-scrollbar::-webkit-scrollbar-track {
+  background: #1f2937; /* gray-800 */
+  border-radius: 4px;
+}
+.none-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hide-scrollbar::-webkit-scrollbar-thumb {
+  background: #4b5563; /* gray-600 */
+  border-radius: 4px;
+}
+.none-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.hide-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280; /* gray-500 */
 }

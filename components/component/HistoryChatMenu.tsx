@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Edit3, MoreHorizontal, Trash2, X } from "lucide-react";
-import { Chat, HistoryChat } from "@/types/chat";
+import { HistoryChat } from "@/types/chat";
 import {
   changeTitleChat,
   deleteChat,
@@ -24,6 +24,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { triggerRefreshHistory } from "@/store/chatSlice";
+import { toast } from "sonner";
 
 const HistoryChatMenu = () => {
   const [loading, setLoading] = useState<boolean>(false);
@@ -69,8 +70,8 @@ const HistoryChatMenu = () => {
     try {
       const data: HistoryChat = await getHistoryChat();
       setThreads(data);
-    } catch (error) {
-      console.error("Error fetching history chats:", error);
+    } catch {
+      toast.error("Error fetching chat history");
     } finally {
       setLoading(false);
     }
@@ -94,7 +95,7 @@ const HistoryChatMenu = () => {
           threads.map((thread) => (
             <SidebarMenuItem key={thread.idChat}>
               <div className="flex items-center justify-between w-full">
-                <SidebarMenuButton asChild className="!pr-2">
+                <SidebarMenuButton asChild className="pr-2!">
                   {reNameThreadId === thread.idChat ? (
                     <Input
                       type="text"
@@ -132,7 +133,8 @@ const HistoryChatMenu = () => {
                   <Button
                     variant="ghost"
                     onClick={() => {
-                      setRenameThreadId(undefined), setNewThreadName(undefined);
+                      setRenameThreadId(undefined);
+                      setNewThreadName(undefined);
                     }}
                   >
                     <X />

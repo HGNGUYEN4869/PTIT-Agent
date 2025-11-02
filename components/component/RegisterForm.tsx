@@ -25,8 +25,9 @@ import { RootState } from "@/store/store";
 import { setAuth } from "@/store/authSlice";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { toast } from "sonner";
 
-// ✅ Schema validation với zod
+//  Schema validation với zod
 const loginSchema = z.object({
   username: z.string().min(3, "Username phải có ít nhất 3 ký tự"),
   email: z.string().email("Email phải có dạng @ptit.edu.vn"),
@@ -39,9 +40,9 @@ export default function RegisterForm() {
   const [loading, setLoading] = useState<boolean>(false);
   const dispatch = useDispatch();
   const router = useRouter();
-  const { isAuthenticated, userId, username } = useSelector(
-    (state: RootState) => state.auth
-  );
+  // const { isAuthenticated, userId, username } = useSelector(
+  //   (state: RootState) => state.auth
+  // );
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(loginSchema),
@@ -68,7 +69,9 @@ export default function RegisterForm() {
         router.push("/");
       }
     } catch (error) {
-      console.log(error);
+      const err = error as { response?: { data?: { error?: string } } };
+      const errorMessage = err?.response?.data?.error || "Đăng ký thất bại";
+      toast.error(errorMessage);
       setLoading(false);
     }
   };
@@ -105,7 +108,7 @@ export default function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <UserPlus className="w-4 h-4"/> Username
+                      <UserPlus className="w-4 h-4" /> Username
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Username" {...field} />
@@ -122,7 +125,7 @@ export default function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <Mail className="w-4 h-4"/> Email
+                      <Mail className="w-4 h-4" /> Email
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Email" {...field} />
@@ -139,7 +142,7 @@ export default function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <LockKeyhole className="w-4 h-4"/> Password
+                      <LockKeyhole className="w-4 h-4" /> Password
                     </FormLabel>
                     <FormControl>
                       <Input

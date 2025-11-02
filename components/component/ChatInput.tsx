@@ -62,7 +62,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex items-end justify-center gap-2 p-4 bg-transparent pl-0"
+      className="flex items-end justify-center gap-2 py-4 bg-transparent mr-4"
     >
       {/* Nút upload file */}
       <div className="relative">
@@ -104,7 +104,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         onChange={(e) => setInput(e.target.value)}
         disabled={disabled}
         // IMPORTANT: override padding/line-height mặc định component (dùng ! để chắc chắn)
-        className="flex-1 bg-background resize-none min-h-[36px] h-full !p-2 !leading-[18px]"
+        className="flex-1 bg-background resize-none min-h-9 h-full p-2! leading-[18px]!"
         onKeyDown={handleEnter}
         onInput={(e) => {
           const target = e.target as HTMLTextAreaElement;

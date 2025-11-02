@@ -1,8 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 
 import axios from "axios";
 
@@ -16,7 +12,8 @@ export const api = axios.create({
 });
 export const db = axios.create({
   // baseURL: "http://172.16.6.91:2009",
-  baseURL: "http://172.16.5.10:2005",
+  // baseURL: "http://localhost:2005",
+  baseURL: "https://ptit-agent-be.onrender.com",
   headers: {
     accept: "application/json",
     "Content-Type": "application/json",
@@ -52,18 +49,14 @@ db.interceptors.response.use(
 
     const status = error.response.status;
 
-        // ✅ Thêm điều kiện: Không refresh cho login/register endpoints
-    const isAuthEndpoint = 
+    //  Thêm điều kiện: Không refresh cho login/register endpoints
+    const isAuthEndpoint =
       originalRequest.url.includes("/agent/auth/login") ||
       originalRequest.url.includes("/agent/auth/register") ||
       originalRequest.url.includes("/agent/auth/me");
 
     // 2️⃣ Nếu 401 mà chưa retry và không phải endpoint /agent/auth/me
-    if (
-      status === 401 &&
-      !originalRequest._retry &&
-      !isAuthEndpoint
-    ) {
+    if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         // Nếu đang refresh, thêm request vào hàng đợi
         return new Promise((resolve, reject) => {
