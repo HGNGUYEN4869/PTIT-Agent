@@ -53,7 +53,7 @@ export default function Home() {
         Xin chào Tôi là PTIT Agent của bạn!
       </div>
 
-      {/* 👇 Giữ cố định input ở đáy */}
+      {/*Giữ cố định input ở đáy */}
       <div className={`absolute z-10 w-full py-4 mb-1 bg-transparent bottom-0 left-1/2 -translate-x-1/2 ${isAgentMode ? 'pl-4' : 'px-72'}`}>
         <ChatInput onSend={handleStartChat} disabled={loading} />
       </div>

@@ -29,7 +29,7 @@ export default function ProtectedLayout({
       <SidebarProvider defaultOpen={!isAgentMode}>
         {!isAgentMode && <AppSidebar />}
         <div
-          className={`flex flex-col h-screen bg-[url('/frame-background.png')] bg-cover transition-all duration-300 ${
+          className={`flex flex-col h-screen bg-[url('/frame-background.png')] bg-cover bg-center transition-all duration-300 ${
             isAgentMode
               ? "fixed right-0 w-[25vw] shadow-2xl border-l-2 border-gray-300"
               : "w-full"
