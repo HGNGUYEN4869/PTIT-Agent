@@ -165,7 +165,7 @@ export default function ChatPage() {
         role: MessageRole.ASSISTANT,
         content:
           formatMarkdown(queryRes.data.answer) ??
-          "Không có phản hồi từ server 🤖",
+          "Không có phản hồi từ server",
       };
       if (queryRes.data.answer) {
         // Tạo message trên db
@@ -184,7 +184,7 @@ export default function ChatPage() {
         ...prev,
         {
           role: MessageRole.ASSISTANT,
-          content: "⚠️ Có lỗi xảy ra khi gửi tin hoặc upload file.",
+          content: "Có lỗi xảy ra khi gửi tin hoặc upload file.",
         },
       ]);
     } finally {
