@@ -20,9 +20,10 @@ import { addMessage } from "../../api/messageFetch";
 import { UUID } from "crypto";
 import { getDetailChat } from "@/app/api/chatFetch";
 import { ChatResponse } from "@/types/chat";
-import { useFileSystem } from "@/hooks/use-file-system";
-import { extractFileOperations } from "@/lib/codeParser";
 import { toast } from "sonner";
+import { type AgentResponse } from "@/lib/agentSystem";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { formatMarkdown } from "@/helper/formatMarkdown";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -37,24 +38,8 @@ export default function ChatPage() {
 
   const isAgentMode = chat.isAgentMode;
 
-  //  File System hook để tự động tạo/sửa files
-  const { processBackendCode, directoryHandle } = useFileSystem();
-
-  function formatMarkdown(content: string): string {
-    return (
-      content
-        // Chuyển [IMAGE: ...] thành thẻ <img>
-        .replace(
-          /\[IMAGE:\s*(.*?)\s*\]/g,
-          '<img src="$1" alt="image" style="max-width:100%;border-radius:8px;margin:8px 0;" />'
-        )
-        .replace(/\|[^\n]+\|\s*\n\s*\n(?=\|)/g, (m) => m.replace(/\n+/g, " "))
-        //  Chuẩn hóa các dòng xuống dòng
-        .replace(/\\n/g, "\n")
-        .replace(/\n{3,}/g, "\n")
-        .trim()
-    );
-  }
+  const [activeChat, setActiveChat] = useState<string | null>(null);
+  usePageTitle(activeChat ? activeChat : "Agent PTIT");
 
   const handleSend = async (text: string, file?: File | undefined) => {
     const userMsg: Message = {
@@ -64,6 +49,7 @@ export default function ChatPage() {
     await addMessage(userMsg, params.idChat as UUID);
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
+
     try {
       let fileId: string | undefined;
 
@@ -95,78 +81,27 @@ export default function ChatPage() {
 
       //  Kết hợp context + text hiện tại
       const fullQueryText = contextText
-        ? `Đoạn chat trên là cuộc hội thoại đang nói. Hãy trả lời câu hỏi ngay dưới đây${contextText}\nUser: ${text}`
+        ? `Lịch sử hội thoại:\n${contextText}\n\nCâu hỏi hiện tại:\nUser: ${text}`
         : text;
 
-      // Sau đó query với full context
-      const queryRes = await ragQuery(fullQueryText);
+      // Query Backend RAG (MCP Client tự execute)
+      const queryRes: { data: AgentResponse } = await ragQuery(fullQueryText);
 
       //  Kiểm tra isAgentMode từ response
-      if (queryRes.data.isAgentMode !== undefined) {
+      if (
+        queryRes.data.isAgentMode !== undefined &&
+        queryRes.data.isAgentMode !== isAgentMode
+      ) {
         dispatch(setAgentMode(queryRes.data.isAgentMode));
       }
 
-      //  Tự động tạo/sửa files nếu có code trong response
-      if (queryRes.data.isAgentMode && queryRes.data.answer) {
-        const operations = extractFileOperations(queryRes.data.answer);
-
-        if (operations.length > 0) {
-          console.log(
-            `🔧 Found ${operations.length} file operation(s), processing...`
-          );
-
-          // Kiểm tra xem user đã chọn folder chưa
-          if (!directoryHandle) {
-            const warningNotification: Message = {
-              role: MessageRole.ASSISTANT,
-              content: `⚠️ **Cần chọn thư mục làm việc!**\n\nTôi đã tìm thấy ${
-                operations.length
-              } file(s) cần tạo:\n${operations
-                .map((op) => `- \`${op.path}\``)
-                .join(
-                  "\n"
-                )}\n\nVui lòng click nút **"Chọn thư mục làm việc"** ở IDE panel bên trái để tôi có thể tạo file cho bạn.`,
-            };
-
-            setMessages((prev) => [...prev, warningNotification]);
-            await addMessage(warningNotification, params.idChat as UUID);
-          } else {
-            // Có folder rồi, tiến hành tạo files
-            try {
-              await processBackendCode(operations);
-
-              // Thêm notification vào chat
-              const fileNotification: Message = {
-                role: MessageRole.ASSISTANT,
-                content: ` **Đã tạo/cập nhật ${
-                  operations.length
-                } file(s):**\n${operations
-                  .map((op) => `- \`${op.path}\` (${op.language || "unknown"})`)
-                  .join("\n")}`,
-              };
-
-              setMessages((prev) => [...prev, fileNotification]);
-              await addMessage(fileNotification, params.idChat as UUID);
-            } catch (error) {
-              console.error("Error processing code operations:", error);
-
-              const errorNotification: Message = {
-                role: MessageRole.ASSISTANT,
-                content: `⚠️ Có lỗi khi tạo file. Vui lòng kiểm tra console.`,
-              };
-
-              setMessages((prev) => [...prev, errorNotification]);
-            }
-          }
-        }
-      }
-
+      // Backend đã execute qua MCP, chỉ hiển thị kết quả
       const botMsg: Message = {
         role: MessageRole.ASSISTANT,
         content:
-          formatMarkdown(queryRes.data.answer) ??
-          "Không có phản hồi từ server",
+          formatMarkdown(queryRes.data.answer) ?? "Không có phản hồi từ server",
       };
+
       if (queryRes.data.answer) {
         // Tạo message trên db
         await addMessage(botMsg, params.idChat as UUID);
@@ -201,6 +136,7 @@ export default function ChatPage() {
           const data: ChatResponse = await getDetailChat(
             params.idChat as string
           );
+          setActiveChat(data.title);
           setMessages(data.messages);
         } catch (error) {
           const err = error as { response?: { data?: { error?: string } } };
@@ -216,57 +152,65 @@ export default function ChatPage() {
       dispatch(clearChatState());
       sentFromRedux.current = true;
     }
-  }, [chat.input, chat.file, dispatch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chat.input, chat.file]);
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
   return (
-    <div className="relative flex flex-col h-full overflow-y-scroll bg-transparent content-wrap">
-      {messages.length === 0 && (
-        <div className="absolute text-2xl font-semibold text-center transform -translate-x-1/2 -translate-y-1/2 bg-transparent pointer-events-none select-none top-1/2 left-1/2 text-muted-foreground z-3">
-          Xin chào Tôi là PTIT Agent của bạn!
-        </div>
-      )}
-
-      {/* CHỈ phần này cuộn */}
-      <div
-        className={`flex-1 pt-4 pb-40 overflow-y-auto ${
-          isAgentMode ? "px-4" : "px-72"
-        }`}
-      >
-        {successUpload && (
-          <div className="absolute top-0 right-0">
-            <Alert>
-              <CheckCircle2Icon />
-              <AlertTitle>File upload thành công</AlertTitle>
-            </Alert>
+    <>
+      <div className="relative flex flex-col h-full overflow-y-scroll bg-transparent content-wrap">
+        {messages.length === 0 && (
+          <div className="absolute text-2xl font-semibold text-center transform -translate-x-1/2 -translate-y-1/2 bg-transparent pointer-events-none select-none top-1/2 left-1/2 text-muted-foreground z-3">
+            Xin chào Tôi là PTIT Agent của bạn!
           </div>
         )}
-        <div className="flex flex-col w-full gap-4">
-          {messages.map((m, index) => (
-            <ChatMessage
-              key={`${index}-${m.content.substring(0, 30)}`}
-              role={m.role}
-              content={m.content}
-            />
-          ))}
-          {loading && (
-            <ChatMessage role={MessageRole.ASSISTANT} content="Đang suy nghĩ" />
+
+        {/* CHỈ phần này cuộn */}
+        <div
+          className={`flex-1 pt-4 pb-40 overflow-y-auto ${
+            isAgentMode ? "px-4" : "2xl:px-72 xl:px-44 lg:px-32 md:px-12 px-4"
+          }`}
+        >
+          {successUpload && (
+            <div className="absolute top-0 right-0">
+              <Alert>
+                <CheckCircle2Icon />
+                <AlertTitle>File upload thành công</AlertTitle>
+              </Alert>
+            </div>
           )}
-          <div ref={messageEndRef} />
+          <div className="flex flex-col w-full gap-4">
+            {messages.map((m, index) => (
+              <ChatMessage
+                key={`${index}-${m.content.substring(0, 30)}`}
+                role={m.role}
+                content={m.content}
+              />
+            ))}
+            {loading && (
+              <ChatMessage
+                role={MessageRole.ASSISTANT}
+                content="Đang suy nghĩ"
+              />
+            )}
+            <div ref={messageEndRef} />
+          </div>
+        </div>
+
+        {/* Giữ cố định input ở đáy */}
+        <div
+          className={`absolute z-10 w-full py-4 mb-1 bg-transparent bottom-0 left-1/2 -translate-x-1/2 ${
+            isAgentMode
+              ? "px-4"
+              : "2xl:px-72 xl:px-44 lg:px-32 md:pl-12 md:pr-10 pl-4"
+          }`}
+        >
+          <ChatInput onSend={handleSend} disabled={loading} />
         </div>
       </div>
-
-      {/* 👇 Giữ cố định input ở đáy */}
-      <div
-        className={`absolute z-10 w-full py-4 mb-1 bg-transparent bottom-0 left-1/2 -translate-x-1/2 ${
-          isAgentMode ? "px-4" : "px-72"
-        }`}
-      >
-        <ChatInput onSend={handleSend} disabled={loading} />
-      </div>
-    </div>
+    </>
   );
 }

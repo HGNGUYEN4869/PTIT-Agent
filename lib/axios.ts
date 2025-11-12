@@ -42,7 +42,7 @@ db.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // 1️⃣ Không có response (VD: server chết, CORS lỗi, mạng rớt)
+    // Không có response (VD: server chết, CORS lỗi, mạng rớt)
     if (!error.response) {
       return Promise.reject(error);
     }
@@ -55,7 +55,7 @@ db.interceptors.response.use(
       originalRequest.url.includes("/agent/auth/register") ||
       originalRequest.url.includes("/agent/auth/me");
 
-    // 2️⃣ Nếu 401 mà chưa retry và không phải endpoint /agent/auth/me
+    // Nếu 401 mà chưa retry và không phải endpoint /agent/auth/me
     if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         // Nếu đang refresh, thêm request vào hàng đợi
@@ -71,16 +71,16 @@ db.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // 3️⃣ Gọi API refresh token
+        // Gọi API refresh token
         await db.get("/agent/auth/me");
 
-        // 4️⃣ Refresh thành công → retry lại các request đang chờ
+        // Refresh thành công → retry lại các request đang chờ
         processQueue(null);
         return db(originalRequest);
       } catch (err: any) {
         processQueue(err);
 
-        // 5️⃣ Nếu /agent/auth/me cũng 401 → refreshToken cũng hết hạn
+        //Nếu /agent/auth/me cũng 401 → refreshToken cũng hết hạn
         if (err?.response?.status === 401) {
           console.warn("Refresh token expired → redirecting to login...");
           window.location.href = "/login"; // hoặc navigate("/login")
@@ -92,7 +92,7 @@ db.interceptors.response.use(
       }
     }
 
-    // 6️⃣ Nếu chính /agent/auth/me bị 401 → không làm gì thêm (tránh loop)
+    //Nếu chính /agent/auth/me bị 401 → không làm gì thêm (tránh loop)
     if (status === 401 && originalRequest.url.includes("/agent/auth/me")) {
       console.warn("Auth endpoint 401 - forcing logout...");
       window.location.href = "/login";

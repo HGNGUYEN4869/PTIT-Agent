@@ -40,7 +40,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         setFile(undefined);
         setIndex(null); // reset chỉ số history
       }
-    } else if (e.key === "ArrowUp") {
+    } else if (e.key === "ArrowUp" && history.length > 0) {
       // Lấy giá trị trước đó
       setIndex((prev) => {
         const newIndex =
@@ -48,7 +48,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         if (newIndex >= 0) setInput(history[newIndex]);
         return newIndex;
       });
-    } else if (e.key === "ArrowDown") {
+    } else if (e.key === "ArrowDown" && history.length > 0) {
       // Lấy giá trị tiếp theo
       setIndex((prev) => {
         if (prev === null) return null;

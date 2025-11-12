@@ -1,5 +1,5 @@
 /**
- * 🚀 Arduino Flasher - Hỗ trợ UNO / Nano / Mega2560
+ * Arduino Flasher - Hỗ trợ UNO / Nano / Mega2560
  * Giao thức STK500v1/v2 qua Web Serial API
  */
 

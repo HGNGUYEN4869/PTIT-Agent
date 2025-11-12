@@ -7,7 +7,6 @@ type IDETerminalProps = {
 };
 
 const IDETerminal = ({ sessionId }: IDETerminalProps) => {
-  const [input, setInput] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
   // Chỉ connect WebSocket khi có sessionId (đang compile) và type là terminal
   const wsUrl =
@@ -17,13 +16,6 @@ const IDETerminal = ({ sessionId }: IDETerminalProps) => {
 
   const logs = useWebSocketLogs(wsUrl);
 
-  // Gửi lệnh đi
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (input.trim() === "") return;
-    wsRef.current?.send(input);
-    setInput(""); // Xóa input sau khi gửi
-  };
 
   return (
     <Terminal className="bg-[#1e1e1e] text-white font-mono h-[300px] overflow-y-auto w-full">
@@ -47,18 +39,6 @@ const IDETerminal = ({ sessionId }: IDETerminalProps) => {
           </div>
         );
       })}
-      {sessionId ? (
-        <form onSubmit={handleSubmit} className="flex items-center mt-2">
-          <span className="text-white pr-2">❯</span>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="bg-[#1e1e1e] text-white outline-none flex-1"
-            autoFocus
-          />
-        </form>
-      ) : null}
     </Terminal>
   );
 };
