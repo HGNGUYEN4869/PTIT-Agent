@@ -85,9 +85,7 @@ export function IDECode() {
   const [expandedFolders, setExpandedFolders] = useState<
     Map<string, FileSystemEntry[]>
   >(new Map());
-  const [isSaving, setIsSaving] = useState(false);
   const [showNewFileDialog, setShowNewFileDialog] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
 
   // Debounce code để auto-save sau 2s không thay đổi
   const debouncedCode = useDebounce(code, 2000);
@@ -125,16 +123,7 @@ export function IDECode() {
       if (!selectedFile || debouncedCode === undefined || loading) {
         return;
       }
-
-      setIsSaving(true);
-      const success = await updateFileContent(selectedFile, debouncedCode);
-
-      if (success) {
-      } else {
-        toast.error(`Lỗi khi lưu ${selectedFile.split("/").pop()}`);
-      }
-
-      setIsSaving(false);
+      await updateFileContent(selectedFile, debouncedCode);
     };
 
     autoSave();
@@ -401,7 +390,7 @@ export function IDECode() {
 
     const success = await createNewFile(fileName, "");
     if (success) {
-      toast.success(`✅ Đã tạo file ${fileName}`);
+      toast.success(`Đã tạo file ${fileName}`);
       setShowNewFileDialog(false);
       await loadDirectoryEntries();
     } else {
@@ -497,17 +486,6 @@ export function IDECode() {
                 title="Refresh"
               >
                 <RefreshCw className="w-3 h-3" />
-              </Button>
-
-              {/* Settings Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSettings(!showSettings)}
-                className="gap-1"
-                title="Settings"
-              >
-                <Settings className="w-3 h-3" />
               </Button>
 
               {selectedFile && (
