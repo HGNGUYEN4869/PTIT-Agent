@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import IDETerminal from "./IDETerminal";
 import { SerialMonitor } from "./SerialMonitor";
+import { Activity, Terminal } from "lucide-react";
 
 type IDEPanelProps = {
   isCompiling?: boolean;
@@ -32,13 +33,13 @@ const IDEPanel = ({ compileSessionId, serialPort, isCompiling }: IDEPanelProps) 
               value="terminal"
               className="rounded-none bg-[#1e1e1e] text-white data-[state=active]:bg-[#2e2e2e]"
             >
-              Terminal
+              <Terminal /> Terminal
             </TabsTrigger>
             <TabsTrigger
               value="serial-monitor"
               className="rounded-none bg-[#1e1e1e] text-white data-[state=active]:bg-[#2e2e2e]"
             >
-              Serial Monitor
+              <Activity /> Serial Monitor
             </TabsTrigger>
           </TabsList>
           <TabsContent value="terminal" className="w-full">

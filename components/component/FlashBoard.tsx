@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
 import {
@@ -11,6 +11,7 @@ import {
 import { ArduinoFlasher, SerialPort } from "@/lib/ArduinoFlasher";
 import { ESP32Flasher } from "@/lib/ESP32Flasher";
 import { motion } from "framer-motion";
+import { toolGateway } from "@/lib/toolGateway";
 
 type FlashAllBoardsProps = {
   sessionId?: string; // Session ID từ compile step
@@ -24,6 +25,15 @@ export default function FlashAllBoards({
   onFlashComplete,
 }: FlashAllBoardsProps) {
   const [isFlashing, setIsFlashing] = useState(false);
+
+  // ✅ Listen for "start_flash" event from ToolGateway (TOOL_UPLOAD_FIRMWARE)
+  useEffect(() => {
+    toolGateway.on("start_flash", handleFlash);
+
+    return () => {
+      toolGateway.removeListener("start_flash", handleFlash);
+    };
+  }, [sessionId, boardType]);
 
   /**Tự nhận diện board theo vendorId */
   async function detectBoard(): Promise<{ type: string; port?: SerialPort }> {
@@ -322,7 +332,6 @@ export default function FlashAllBoards({
           const port = (await navigator.serial.requestPort()) as SerialPort;
           board = { type: boardType, port };
         }
-        toast.success(`Sử dụng board đã chọn: ${boardType}`);
       } else {
         // Fallback: auto-detect nếu không có boardType
         board = await detectBoard();
@@ -335,10 +344,30 @@ export default function FlashAllBoards({
       else if (board.type === "ESP32" && board.port)
         await flashESP32(board.port);
       else if (board.type === "STM32") await flashSTM32();
-      else toast.error("Board không được hỗ trợ nạp tự động!");
+      else throw new Error("Board không được hỗ trợ nạp tự động!");
+
+      // ✅ EMIT SUCCESS EVENT to ToolGateway
+      console.log("📡 Emitting flash_complete event to ToolGateway...");
+      toolGateway.emit("flash_complete", {
+        boardType: board.type,
+        port: board.port,
+        timestamp: Date.now(),
+      });
+
+      // ✅ Also call callback for IDECode if provided (backward compatibility)
+      if (onFlashComplete && board.port) {
+        onFlashComplete(board.port);
+      }
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       toast.error(`Lỗi nạp code: ${error.message}`);
+
+      // ✅ EMIT ERROR EVENT to ToolGateway
+      console.log("📡 Emitting flash_error event to ToolGateway...");
+      toolGateway.emit("flash_error", {
+        message: error.message,
+        timestamp: Date.now(),
+      });
     } finally {
       setIsFlashing(false);
     }

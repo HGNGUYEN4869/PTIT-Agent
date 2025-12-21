@@ -3,7 +3,10 @@
 import { useState, ChangeEvent, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Paperclip, X } from "lucide-react";
+import { Send, Paperclip, X, Mic, Square } from "lucide-react";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import { uploadVoiceFile } from "@/app/api/voiceUpload";
+import { toast } from "sonner";
 
 interface ChatInputProps {
   onSend: (message: string, file?: File) => void;
@@ -15,11 +18,42 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [file, setFile] = useState<File | undefined>(undefined);
   const [history, setHistory] = useState<string[]>([]); // lịch sử nhập
   const [index, setIndex] = useState<number | null>(null); // chỉ số history đang chọn
+  const [isUploadingVoice, setIsUploadingVoice] = useState(false);
+
+  // Audio recorder hook
+  const { isRecording, recordingTime, startRecording, stopRecording } =
+    useAudioRecorder();
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
+    }
+  };
+
+  // Handle mic button click
+  const handleMicClick = async () => {
+    if (!isRecording) {
+      // Start recording
+      await startRecording();
+    } else {
+      // Stop recording & upload
+      setIsUploadingVoice(true);
+      try {
+        const audioBlob = await stopRecording();
+        if (audioBlob) {
+          const voiceResponse = await uploadVoiceFile(audioBlob);
+          // Set input = text lấy từ API response
+          if (voiceResponse.data?.transcript) {
+            setInput(voiceResponse.data.transcript);
+          }
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : "Lỗi ghi âm";
+        toast.error(errorMsg);
+      } finally {
+        setIsUploadingVoice(false);
+      }
     }
   };
 
@@ -116,6 +150,28 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         }}
         style={{ boxSizing: "border-box" }} // đảm bảo padding + border tính đúng
       />
+
+      {/* Nút ghi âm */}
+      <Button
+        type="button"
+        variant={isRecording ? "destructive" : "outline"}
+        size="icon"
+        disabled={disabled || isUploadingVoice}
+        onClick={handleMicClick}
+        className="p-2 relative"
+        title={isRecording ? `Ghi âm (${recordingTime}s)` : "Bắt đầu ghi âm"}
+      >
+        {isRecording ? (
+          <>
+            <Square className="w-6 h-6 fill-current" />
+            <span className="absolute -top-1 -right-1 text-xs font-bold text-white bg-red-500 rounded-full w-5 h-5 flex items-center justify-center">
+              {recordingTime}
+            </span>
+          </>
+        ) : (
+          <Mic className="w-6 h-6" />
+        )}
+      </Button>
 
       {/* Gửi */}
       <Button

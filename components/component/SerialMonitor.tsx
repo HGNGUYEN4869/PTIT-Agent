@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { Terminal } from "../ui/terminal";
-import { Power, Trash2 } from "lucide-react";
+import { Trash2, Wifi, WifiOff } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { Input } from "../ui/input";
+import { toolGateway } from "@/lib/toolGateway";
 
 type SerialMonitorProps = {
   serialPort: SerialPort | null;
@@ -32,6 +34,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
 
   // Mở port và bắt đầu đọc data
   const connectSerial = async () => {
+    await disconnect();
     if (!serialPort) {
       toast.error("Không có port nào được chọn. Vui lòng flash code trước.");
       return;
@@ -96,6 +99,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
 
     const decoder = new TextDecoder();
     readerRef.current = serialPort.readable.getReader();
+    let buffer = ""; // ✅ Accumulate partial data
 
     try {
       while (true) {
@@ -103,8 +107,17 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
         if (done) break;
 
         if (value) {
-          const text = decoder.decode(value);
-          setLogs((prev) => [...prev, text]);
+          buffer += decoder.decode(value);
+
+          // ✅ Split by newline & add complete lines only
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+          // Add complete lines to logs
+          const completeLines = lines.filter((l) => l.trim().length > 0);
+          if (completeLines.length > 0) {
+            setLogs((prev) => [...prev, ...completeLines]);
+          }
         }
       }
     } catch (error) {
@@ -118,27 +131,27 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
   };
 
   // Gửi data tới Arduino (hiện tại chưa sử dụng)
-  // const sendData = async () => {
-  //   if (!serialPort || !serialPort.writable || !input.trim()) return;
+  const sendData = async () => {
+    if (!serialPort || !serialPort.writable || !input.trim()) return;
 
-  //   try {
-  //     if (!writerRef.current) {
-  //       writerRef.current = serialPort.writable.getWriter();
-  //     }
+    try {
+      if (!writerRef.current) {
+        writerRef.current = serialPort.writable.getWriter();
+      }
 
-  //     const encoder = new TextEncoder();
-  //     const data = encoder.encode(input + "\n");
-  //     await writerRef.current.write(data);
+      const encoder = new TextEncoder();
+      const data = encoder.encode(input + "\n");
+      await writerRef.current.write(data);
 
-  //     setLogs((prev) => [...prev, `> ${input}\n`]);
-  //     setInput("");
-  //   } catch (error) {
-  //     const err = error instanceof Error ? error : new Error(String(error));
-  //     toast.error(`Lỗi gửi dữ liệu: ${err.message}`);
-  //     writerRef.current?.releaseLock();
-  //     writerRef.current = null;
-  //   }
-  // };
+      setLogs((prev) => [...prev, `> ${input}\n`]);
+      setInput("");
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      toast.error(`Lỗi gửi dữ liệu: ${err.message}`);
+      writerRef.current?.releaseLock();
+      writerRef.current = null;
+    }
+  };
 
   // Ngắt kết nối
   const disconnect = async () => {
@@ -174,12 +187,33 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
     el.scrollTop = el.scrollHeight;
   }, [logs]);
 
-  // Cleanup khi unmount
+  // ✅ Setup listener for ToolGateway's request_serial_data event
   useEffect(() => {
-    return () => {
-      disconnect();
+    const handleRequestSerialData = () => {
+      // Emit current logs to ToolGateway
+      toolGateway.emit("serial_data_received", {
+        logs: logs,
+        isConnected: isConnected,
+        timestamp: Date.now(),
+      });
     };
-  }, []);
+
+    toolGateway.on("request_serial_data", handleRequestSerialData);
+
+    return () => {
+      toolGateway.removeListener(
+        "request_serial_data",
+        handleRequestSerialData
+      );
+    };
+  }, [logs, isConnected]);
+
+  // // Cleanup khi unmount
+  // useEffect(() => {
+  //   return () => {
+  //     disconnect();
+  //   };
+  // }, []);
 
   return (
     <div className="flex flex-col">
@@ -188,7 +222,12 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
         <div className="flex items-center gap-2 w-full justify-end">
           <Select
             value={baudRate.toString()}
-            onValueChange={(value) => setBaudRate(Number(value))}
+            onValueChange={(value) => {
+              const newBaudRate = Number(value);
+              setBaudRate(newBaudRate);
+              // ✅ Emit baudRate to toolGateway whenever user changes it
+              toolGateway.setCurrentBaudRate(newBaudRate);
+            }}
             disabled={isConnected}
           >
             <SelectTrigger
@@ -211,19 +250,21 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
           </Select>
 
           {!isConnected ? (
-            <Button size="sm" onClick={connectSerial} className="gap-1">
-              <Power className="w-3 h-3" />
+            <Button
+              size="sm"
+              onClick={connectSerial}
+              className="gap-1 text-green-500"
+            >
+              <Wifi className="w-3 h-3" />
               Kết nối
             </Button>
           ) : (
             <Button
               size="sm"
               onClick={disconnect}
-              variant="destructive"
-              className="gap-1"
+              className="gap-1 text-red-500"
             >
-              <Power className="w-3 h-3" />
-              Ngắt
+              <WifiOff className="w-3 h-3" /> Ngắt
             </Button>
           )}
 

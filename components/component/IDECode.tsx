@@ -19,7 +19,6 @@ import {
   LaptopMinimal,
   FilePlus,
   Trash2,
-  Settings,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { NewFileDialog } from "./NewFileDialog";
@@ -35,6 +34,7 @@ import FlashAllBoards from "./FlashBoard";
 import { compileArduino } from "@/app/api/arduinoCompile";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { toolGateway } from "@/lib/toolGateway";
 
 // Danh sách các board được hỗ trợ
 const SUPPORTED_BOARDS = [
@@ -128,6 +128,43 @@ export function IDECode() {
 
     autoSave();
   }, [debouncedCode, selectedFile, loading, updateFileContent]);
+
+  // ✅ Listen for file_updated event from toolGateway
+  useEffect(() => {
+    const handler = async (event: any) => {
+      const { fileName, toolName } = event;
+
+      console.log(`📝 File updated event received: ${fileName} (${toolName})`);
+
+      // Nếu file đang được display trong editor thì reload
+      if (fileName === selectedFile) {
+        console.log(`🔄 Reloading file: ${selectedFile}`);
+
+        try {
+          const freshContent = await readFileContent(selectedFile);
+          if (freshContent !== null) {
+            setCode(freshContent);
+            toast.success(`File update successfully`);
+          }
+          await loadFileList();
+        } catch (error) {
+          toast.error(`Failed to update file: ${error}`);
+        }
+      }
+
+      // Nếu là DELETE thì clear file explorer
+      if (toolName === "TOOL_DELETE_FILE" && fileName === selectedFile) {
+        setSelectedFile("");
+        setCode("");
+      }
+    };
+
+    toolGateway.on("file_updated", handler);
+
+    return () => {
+      toolGateway.off("file_updated", handler);
+    };
+  }, [selectedFile, readFileContent]);
 
   // Render tree với lazy loading
   const renderTree = (entries: FileSystemEntry[], level: number = 0) => {
@@ -252,6 +289,13 @@ export function IDECode() {
   const handleFileClick = async (fileName: string) => {
     setLoading(true);
     setSelectedFile(fileName);
+
+    // ✅ Lưu FULL PATH file vào ToolGateway để Agent có thể compile
+    if (typeof window !== "undefined") {
+      // ✅ Gửi full path (VD: "projects/led.ino") không extract chỉ filename
+      (window as any).setSelectedFileFromIDE?.(fileName);
+      console.log(`📝 Selected file saved to ToolGateway: ${fileName}`);
+    }
 
     // Detect language từ file extension
     const ext = fileName.split(".").pop()?.toLowerCase();
@@ -406,7 +450,9 @@ export function IDECode() {
     }
 
     // Confirm dialog
-    if (!confirm(`Bạn có chắc muốn xóa file "${selectedFile.split("/").pop()}"?`)) {
+    if (
+      !confirm(`Bạn có chắc muốn xóa file "${selectedFile.split("/").pop()}"?`)
+    ) {
       return;
     }
 
@@ -547,10 +593,9 @@ export function IDECode() {
                     sessionId={compileSessionId}
                     boardType={getBoardType(selectedBoard)}
                     onFlashComplete={(port) => {
-                      toast.success(
-                        "Flash hoàn tất! Port sẵn sàng cho Serial Monitor"
-                      );
                       setSerialPort(port);
+                      // ✅ Store port in toolGateway for TOOL_SERIAL_READ fallback
+                      toolGateway.setCurrentSerialPort(port);
                     }}
                   />
                 </>

@@ -21,13 +21,17 @@ import { UUID } from "crypto";
 import { getDetailChat } from "@/app/api/chatFetch";
 import { ChatResponse } from "@/types/chat";
 import { toast } from "sonner";
-import { type AgentResponse } from "@/lib/agentSystem";
+import { toolGateway } from "@/lib/toolGateway";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { formatMarkdown } from "@/helper/formatMarkdown";
+import { useAgentWS, AgentTask } from "@/app/webSocket";
+import { agentWSClient } from "@/app/webSocket/agentWSClient";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [currentTask, setCurrentTask] = useState<AgentTask | null>(null);
+  const processedTaskIds = useRef<Set<string>>(new Set()); // Track processed tasks to avoid duplicates
   const chat = useSelector((state: RootState) => state.chat);
   const dispatch = useDispatch();
   const sentFromRedux = useRef(false);
@@ -37,72 +41,107 @@ export default function ChatPage() {
   const params = useParams(); //{ idChat : 'abc123' }
 
   const isAgentMode = chat.isAgentMode;
+  const agentWS = useAgentWS();
 
   const [activeChat, setActiveChat] = useState<string | null>(null);
   usePageTitle(activeChat ? activeChat : "Agent PTIT");
 
   const handleSend = async (text: string, file?: File | undefined) => {
+    text = text.trim();
     const userMsg: Message = {
       role: MessageRole.USER,
       content: text,
     };
-    await addMessage(userMsg, params.idChat as UUID);
     setMessages((prev) => [...prev, userMsg]);
+    await addMessage(userMsg, params.idChat as UUID);
     setLoading(true);
 
     try {
-      let fileId: string | undefined;
+      // === MODE 1: AGENT MODE (WebSocket) ===
+      if (isAgentMode) {
+        console.log("🤖 Agent Mode: Using WebSocket");
 
-      // Nếu có file thì upload trước
-      if (file) {
-        const uploadRes = await uploadRagFile(file);
-        fileId = uploadRes.data.file;
-        setSuccessUpload(true);
-        setTimeout(() => {
-          setSuccessUpload(false);
-        }, 2000);
+        // Connect to Agent if not already connected
+        if (!agentWS.isConnected) {
+          console.log("🔌 Connecting to Agent...");
+          const connected = await agentWS.connect();
+          if (!connected) {
+            throw new Error("Failed to connect to Agent");
+          }
+        }
+
+        // === Build query with context (6 last messages) ===
+        // Tương tự RAG mode: lấy 6 tin nhắn gần nhất làm context
+        const last6Messages = messages.slice(-6);
+        const contextText = last6Messages
+          .map(
+            (msg) =>
+              `${msg.role === MessageRole.USER ? "User" : "Assistant"}: ${
+                msg.content
+              }`
+          )
+          .join("\n");
+
+        // Kết hợp context + query hiện tại
+        const fullQueryText = contextText
+          ? `Lịch sử hội thoại:\n${contextText}\n\nCâu hỏi hiện tại:\nUser: ${text}`
+          : text;
+
+        // Send USER_QUERY to Agent (kèm context)
+        const success = agentWS.sendQuery(fullQueryText);
+        if (!success) {
+          throw new Error("Failed to send query");
+        }
+
+        console.log("📤 Query sent to Agent, waiting for AGENT_TASK...");
+        // The AGENT_TASK will be handled by useEffect listener below
       }
+      // === MODE 2: RAG MODE (HTTP) ===
+      else {
+        console.log("📚 RAG Mode: Using HTTP API");
 
-      if (text.trim() === "") {
-        text = "Đọc file " + (fileId ? `${fileId}` : "tôi gửi");
-        text += " giúp tôi và tóm tắt nội dung chính.";
-      }
+        let fileId: string | undefined;
 
-      //  Lấy 6 tin nhắn cuối cùng làm context
-      const last6Messages = messages.slice(-6);
-      const contextText = last6Messages
-        .map(
-          (msg) =>
-            `${msg.role === MessageRole.USER ? "User" : "Assistant"}: ${
-              msg.content
-            }`
-        )
-        .join("\n");
+        // Nếu có file thì upload trước
+        if (file) {
+          const uploadRes = await uploadRagFile(file);
+          fileId = uploadRes.data.file;
+          setSuccessUpload(true);
+          setTimeout(() => {
+            setSuccessUpload(false);
+          }, 2000);
+        }
 
-      //  Kết hợp context + text hiện tại
-      const fullQueryText = contextText
-        ? `Lịch sử hội thoại:\n${contextText}\n\nCâu hỏi hiện tại:\nUser: ${text}`
-        : text;
+        if (text.trim() === "") {
+          text = "Đọc file " + (fileId ? `${fileId}` : "tôi gửi");
+          text += " giúp tôi và tóm tắt nội dung chính.";
+        }
 
-      // Query Backend RAG (MCP Client tự execute)
-      const queryRes: { data: AgentResponse } = await ragQuery(fullQueryText);
+        //  Lấy 6 tin nhắn cuối cùng làm context
+        const last6Messages = messages.slice(-6);
+        const contextText = last6Messages
+          .map(
+            (msg) =>
+              `${msg.role === MessageRole.USER ? "User" : "Assistant"}: ${
+                msg.content
+              }`
+          )
+          .join("\n");
 
-      //  Kiểm tra isAgentMode từ response
-      if (
-        queryRes.data.isAgentMode !== undefined &&
-        queryRes.data.isAgentMode !== isAgentMode
-      ) {
-        dispatch(setAgentMode(queryRes.data.isAgentMode));
-      }
+        //  Kết hợp context + text hiện tại
+        const fullQueryText = contextText
+          ? `Lịch sử hội thoại:\n${contextText}\n\nCâu hỏi hiện tại:\nUser: ${text}`
+          : text;
 
-      // Backend đã execute qua MCP, chỉ hiển thị kết quả
-      const botMsg: Message = {
-        role: MessageRole.ASSISTANT,
-        content:
-          formatMarkdown(queryRes.data.answer) ?? "Không có phản hồi từ server",
-      };
+        const data = await ragQuery(fullQueryText);
 
-      if (queryRes.data.answer) {
+        const botMsg: Message = {
+          role: MessageRole.ASSISTANT,
+          content: formatMarkdown(data.answer) ?? "Không có phản hồi từ server",
+        };
+        //ưu tiên tốc độ hiển thị đưa ra ui trước
+        setMessages((prev) => [...prev, botMsg]);
+
         // Tạo message trên db
         await addMessage(botMsg, params.idChat as UUID);
 
@@ -112,20 +151,170 @@ export default function ChatPage() {
           sendFirst.current = false;
         }
       }
-
-      setMessages((prev) => [...prev, botMsg]);
-    } catch {
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Lỗi máy chủ";
       setMessages((prev) => [
         ...prev,
         {
           role: MessageRole.ASSISTANT,
-          content: "Có lỗi xảy ra khi gửi tin hoặc upload file.",
+          content: errorMsg,
         },
       ]);
     } finally {
       setLoading(false);
     }
   };
+
+  // === EFFECT 1: Handle AGENT_TASK messages (display answer immediately) ===
+  useEffect(() => {
+    if (!isAgentMode) return;
+
+    const unsubscribe = agentWSClient.on(
+      "AGENT_TASK",
+      async (agentTask: AgentTask) => {
+        //set luôn sesionId tránh agent trả sessionId "" hoặc null
+        agentTask.sessionId = agentWSClient.getSessionId();
+        console.log("Received AGENT_TASK:", agentTask);
+        setCurrentTask(agentTask);
+
+        // Display answer immediately
+        if (agentTask.answer) {
+          const botMsg: Message = {
+            role: MessageRole.ASSISTANT,
+            content: formatMarkdown(agentTask.answer) ?? agentTask.answer,
+          };
+
+          if (sendFirst.current) {
+            dispatch(triggerRefreshHistory());
+            sendFirst.current = false;
+          }
+
+          setMessages((prev) => [...prev, botMsg]);
+          console.log("✅ Answer displayed, waiting for tool execution...");
+          //chỗ này cũng ưu tiên hiển thị ra giao diện thật nhanh tạo ux tốt
+          await addMessage(botMsg, params.idChat as UUID);
+        }
+
+        // If no tool execution needed, clear loading immediately
+        if (!agentTask.toolName || agentTask.toolName === "") {
+          console.log("✅ No tool execution needed, clearing loading state");
+          setLoading(false);
+        }
+      }
+    );
+
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAgentMode, dispatch, params.idChat]);
+
+  // === EFFECT 2: Handle tool execution for AGENT_TASK ===
+  useEffect(() => {
+    if (!isAgentMode || !currentTask || !currentTask.toolName) return;
+
+    // ✅ Check if this task was already processed (deduplicate)
+    const taskId = currentTask.sessionId;
+    if (processedTaskIds.current.has(taskId)) {
+      console.log(`⏭️  Task already processed, skipping: ${taskId}`);
+      return;
+    }
+    processedTaskIds.current.add(taskId);
+
+    let isMounted = true;
+
+    const executeTask = async () => {
+      try {
+        console.log(
+          `⚙️  Executing tool via ToolGateway: ${currentTask.toolName}`
+        );
+
+        // Route task to toolGateway for execution (direct execute, no queue)
+        const taskWithCorrectType = {
+          ...currentTask,
+          toolName: currentTask.toolName as any,
+        };
+        toolGateway.receiveAgentTask(taskWithCorrectType);
+
+        // Wait for task completion via toolGateway events
+        const onTaskCompleted = (event: { sessionId: string }) => {
+          if (!isMounted) return;
+
+          if (event.sessionId === currentTask.sessionId) {
+            console.log("✅ Tool executed via ToolGateway");
+
+            // Get the task result from toolGateway
+            const taskStatus = toolGateway.getLastTaskResult();
+            if (taskStatus?.result) {
+              // === Lấy 6 tin nhắn cuối làm context ===
+              const last6Messages = messages.slice(-6);
+              const contextText = last6Messages
+                .map(
+                  (msg) =>
+                    `${msg.role === MessageRole.USER ? "User" : "Assistant"}: ${
+                      msg.content
+                    }`
+                )
+                .join("\n");
+              // === UNIFIED FORMAT: Send TOOL_RESULT kèm context ===
+              const success = agentWS.sendToolResult(
+                currentTask.sessionId,
+                "success",
+                taskStatus.result,
+                contextText // ✅ Gửi lịch sử conversation
+              );
+
+              if (success) {
+                console.log("✅ TOOL_RESULT sent to Agent");
+              } else {
+                console.error("❌ Failed to send TOOL_RESULT");
+              }
+            }
+
+            // Cleanup listener
+            toolGateway.removeListener("task_completed", onTaskCompleted);
+            setCurrentTask(null);
+            processedTaskIds.current.clear();
+            setLoading(false);
+          }
+        };
+
+        toolGateway.on("task_completed", onTaskCompleted);
+      } catch (error) {
+        console.error("❌ Tool execution error:", error);
+
+        if (!isMounted) return;
+
+        // === Lấy 6 tin nhắn cuối làm context ===
+        const last6Messages = messages.slice(-6);
+        const contextText = last6Messages
+          .map(
+            (msg) =>
+              `${msg.role === MessageRole.USER ? "User" : "Assistant"}: ${
+                msg.content
+              }`
+          )
+          .join("\n");
+
+        // === UNIFIED FORMAT: error info merged into result ===
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        agentWS.sendToolResult(
+          currentTask.sessionId,
+          "error",
+          { message: errorMsg },
+          contextText // ✅ Gửi lịch sử context với error
+        );
+        processedTaskIds.current.clear();
+        setCurrentTask(null);
+        setLoading(false);
+      }
+    };
+
+    executeTask();
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTask, isAgentMode, agentWS]);
 
   useEffect(() => {
     //nếu không có input đầu vào

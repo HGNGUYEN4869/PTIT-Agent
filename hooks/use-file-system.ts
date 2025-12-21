@@ -13,6 +13,7 @@ import {
   createNestedFile,
   type FileSystemEntry,
 } from "@/lib/fileSystemAPI";
+import { toolGateway } from "@/lib/agentSystem";
 
 export interface FileSystemState {
   directoryHandle: FileSystemDirectoryHandle | null;
@@ -34,6 +35,7 @@ export function useFileSystem() {
 
   /**
    * Yêu cầu user chọn folder để làm việc
+   * Sync với ToolGateway để cache directory handle
    */
   const selectWorkingDirectory = useCallback(async () => {
     const handle = await selectDirectory();
@@ -43,6 +45,11 @@ export function useFileSystem() {
         directoryHandle: handle,
         currentDirectory: handle.name,
       }));
+
+      // Sync với ToolGateway để cache (non-serializable)
+      toolGateway.setDirectoryHandle(handle);
+
+      console.log(`✅ Directory selected and synced: ${handle.name}`);
 
       // Auto load entries (lazy loading - chỉ 1 level)
       await loadDirectoryEntries(handle);
