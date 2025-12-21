@@ -10,6 +10,8 @@ import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { motion } from "framer-motion";
 import { MessageRole } from "@/types/message";
 import { BrainCircuit } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 interface ChatMessageProps {
   role: MessageRole;
@@ -18,6 +20,8 @@ interface ChatMessageProps {
 
 export function ChatMessage({ role, content }: ChatMessageProps) {
   const isUser = role === MessageRole.USER;
+  const chat = useSelector((state: RootState) => state.chat);
+  const isAgentMode = chat.isAgentMode;
 
   return (
     <motion.div
@@ -47,7 +51,7 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
         isUser ? "justify-end" : "justify-start"
       )}
     >
-      {isUser ? (
+      {isUser && !isAgentMode ? (
         <></>
       ) : (
         <div className="absolute top-0 bg-[#f5f5f5] p-2 rounded-full -left-10 shadow-md">

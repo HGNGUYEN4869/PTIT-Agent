@@ -8,6 +8,13 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { setAgentMode } from "@/store/chatSlice";
 import { useEffect } from "react";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 export default function ProtectedLayout({
   children,
@@ -44,14 +51,22 @@ export default function ProtectedLayout({
               )}
               <span className={!isAgentMode ? "ml-2" : ""}>PTIT Agent</span>
             </div>
-
-            {/* Toggle Agent Mode Button */}
-            <button
-              onClick={handleToggleAgentMode}
-              className="px-3 py-1 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              {isAgentMode ? "Thoát Agent Mode" : "Vào Agent Mode"}
-            </button>
+            <div className="flex items-center">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="pr-2">
+                    <Switch
+                    id="agentMode"
+                    checked={isAgentMode}
+                    onCheckedChange={handleToggleAgentMode}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isAgentMode ? (<p>Nomal Mode</p>) : (<p>Agent Mode</p>)}
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto content-wrap">{children}</div>
         </div>

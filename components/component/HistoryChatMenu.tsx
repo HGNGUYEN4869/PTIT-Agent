@@ -32,6 +32,7 @@ const HistoryChatMenu = () => {
   const [reNameThreadId, setRenameThreadId] = useState<string | undefined>(
     undefined
   );
+  
   const [newThreadName, setNewThreadName] = useState<string | undefined>(
     undefined
   );
@@ -41,7 +42,6 @@ const HistoryChatMenu = () => {
 
   // Listen Redux state để refresh khi có thay đổi
   const { refreshHistory } = useSelector((state: RootState) => state.chat);
-
   const handleRouteToChat = (idChat: string) => {
     router.push(`/${idChat}`);
   };
@@ -51,8 +51,8 @@ const HistoryChatMenu = () => {
       await changeTitleChat(reNameThreadId, newThreadName);
       dispatch(triggerRefreshHistory());
     }
-      setRenameThreadId(undefined);
-      setNewThreadName(undefined);
+    setRenameThreadId(undefined);
+    setNewThreadName(undefined);
   };
 
   const handleDelete = async (threadId: string) => {
@@ -112,7 +112,7 @@ const HistoryChatMenu = () => {
                     />
                   ) : (
                     <button
-                      className={`flex items-center w-full py-1 rounded-md hover:bg-accent hover:text-accent-foreground ${
+                      className={`flex items-center w-full pl-2! pr-6! rounded-md hover:bg-accent hover:text-accent-foreground ${
                         params.idChat === thread.idChat
                           ? "bg-accent text-accent-foreground"
                           : ""
@@ -123,7 +123,7 @@ const HistoryChatMenu = () => {
                         }
                       }}
                     >
-                      <span className="truncate">{thread.title}</span>
+                      <span>{thread.title}</span>
                     </button>
                   )}
                 </SidebarMenuButton>
@@ -136,6 +136,7 @@ const HistoryChatMenu = () => {
                       setRenameThreadId(undefined);
                       setNewThreadName(undefined);
                     }}
+                    className="p-2! ml-1!"
                   >
                     <X />
                   </Button>

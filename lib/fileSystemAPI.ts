@@ -284,7 +284,7 @@ export async function deleteFile(
     }
 
     await currentHandle.removeEntry(fileName);
-    console.log(`🗑️ File deleted: ${filePath}`);
+    console.log(`File deleted: ${filePath}`);
   } catch (error) {
     console.error(`Error deleting file ${filePath}:`, error);
     throw error;

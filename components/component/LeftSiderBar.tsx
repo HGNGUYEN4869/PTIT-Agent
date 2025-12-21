@@ -78,7 +78,7 @@ export function AppSidebar() {
             alt="Logo"
             className="w-16 h-16 rounded-md"
           />
-          <span className="text-lg font-semibold">AGENT</span>
+          {/* <span className="text-lg font-semibold">AGENT</span> */}
         </div>
       </SidebarHeader>
 

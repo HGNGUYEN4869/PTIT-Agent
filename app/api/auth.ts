@@ -1,4 +1,5 @@
 import { db } from "@/lib/axios";
+import { toast } from "sonner";
 
 // Types
 export interface RegisterRequest {
@@ -94,7 +95,7 @@ export const checkAuth = async (): Promise<CheckAuthResponse> => {
     });
 
     if (response.status !== 200) {
-      console.log("Auth check failed with status:", response.status);
+      toast.error(`Lỗi ${response.status}: Xác thực thất bại`);
       return {
         isAuthenticated: false,
       };

@@ -100,7 +100,7 @@ export class ESP32Flasher {
       if (chipName.includes("ESP32") && !chipName.includes("ESP8266")) {
         try {
           await this.esploader.changeBaud();
-        } catch (err) {
+        } catch {
           toast.warning("Không thể thay đổi baud rate, sẽ sử dụng mặc định");
         }
       } else {

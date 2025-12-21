@@ -8,7 +8,7 @@ export const createChat = async (
     "/h/chats/createChat",
     CreateChatRequest,
     {
-      withCredentials: true, // ⚠️ Gửi cookie accessToken lên server
+      withCredentials: true, // Gửi cookie accessToken lên server
       headers: {
         "Content-Type": "application/json",
       },
@@ -21,7 +21,7 @@ export const getHistoryChat = async (): Promise<HistoryChat> => {
   const response = await db.get<HistoryChat>(
     "/h/chats/user",
     {
-      withCredentials: true, // ⚠️ Gửi cookie accessToken lên server
+      withCredentials: true, // Gửi cookie accessToken lên server
       headers: {
         "Content-Type": "application/json",
       },

@@ -17,8 +17,11 @@ import {
   ChevronDown,
   Folders,
   LaptopMinimal,
+  FilePlus,
+  Trash2,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { NewFileDialog } from "./NewFileDialog";
 import {
   Select,
   SelectContent,
@@ -31,6 +34,7 @@ import FlashAllBoards from "./FlashBoard";
 import { compileArduino } from "@/app/api/arduinoCompile";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { toolGateway } from "@/lib/toolGateway";
 
 // Danh sách các board được hỗ trợ
 const SUPPORTED_BOARDS = [
@@ -72,6 +76,8 @@ export function IDECode() {
     loadDirectoryEntries,
     readFileContent,
     updateFileContent,
+    deleteFileByName,
+    createNewFile,
   } = useFileSystem();
 
   const [selectedFile, setSelectedFile] = useState<string>("");
@@ -79,7 +85,7 @@ export function IDECode() {
   const [expandedFolders, setExpandedFolders] = useState<
     Map<string, FileSystemEntry[]>
   >(new Map());
-  const [isSaving, setIsSaving] = useState(false);
+  const [showNewFileDialog, setShowNewFileDialog] = useState(false);
 
   // Debounce code để auto-save sau 2s không thay đổi
   const debouncedCode = useDebounce(code, 2000);
@@ -117,20 +123,48 @@ export function IDECode() {
       if (!selectedFile || debouncedCode === undefined || loading) {
         return;
       }
-
-      setIsSaving(true);
-      const success = await updateFileContent(selectedFile, debouncedCode);
-
-      if (success) {
-      } else {
-        toast.error(`❌ Lỗi khi lưu ${selectedFile.split("/").pop()}`);
-      }
-
-      setIsSaving(false);
+      await updateFileContent(selectedFile, debouncedCode);
     };
 
     autoSave();
   }, [debouncedCode, selectedFile, loading, updateFileContent]);
+
+  // ✅ Listen for file_updated event from toolGateway
+  useEffect(() => {
+    const handler = async (event: any) => {
+      const { fileName, toolName } = event;
+
+      console.log(`📝 File updated event received: ${fileName} (${toolName})`);
+
+      // Nếu file đang được display trong editor thì reload
+      if (fileName === selectedFile) {
+        console.log(`🔄 Reloading file: ${selectedFile}`);
+
+        try {
+          const freshContent = await readFileContent(selectedFile);
+          if (freshContent !== null) {
+            setCode(freshContent);
+            toast.success(`File update successfully`);
+          }
+          await loadFileList();
+        } catch (error) {
+          toast.error(`Failed to update file: ${error}`);
+        }
+      }
+
+      // Nếu là DELETE thì clear file explorer
+      if (toolName === "TOOL_DELETE_FILE" && fileName === selectedFile) {
+        setSelectedFile("");
+        setCode("");
+      }
+    };
+
+    toolGateway.on("file_updated", handler);
+
+    return () => {
+      toolGateway.off("file_updated", handler);
+    };
+  }, [selectedFile, readFileContent]);
 
   // Render tree với lazy loading
   const renderTree = (entries: FileSystemEntry[], level: number = 0) => {
@@ -145,8 +179,8 @@ export function IDECode() {
             onClick={() => handleFileClick(entry.path)}
             className={`w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 transition-colors ${
               selectedFile === entry.path
-                ? "bg-blue-600 text-white"
-                : "hover:bg-gray-700 text-gray-300"
+                ? "bg-[#7a7a7a] text-white"
+                : "hover:bg-[#444444] text-gray-300"
             }`}
             style={{ paddingLeft: `${(level + 1) * 12 + 8}px` }}
           >
@@ -159,7 +193,7 @@ export function IDECode() {
           <div key={entry.path}>
             <button
               onClick={() => toggleFolder(entry.path, entry)}
-              className="w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-1 hover:bg-gray-700 text-gray-400 transition-colors"
+              className="w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-1 hover:bg-[#444444] text-gray-400 transition-colors"
               style={{ paddingLeft: `${level * 12 + 8}px` }}
             >
               {isExpanded ? (
@@ -255,6 +289,13 @@ export function IDECode() {
   const handleFileClick = async (fileName: string) => {
     setLoading(true);
     setSelectedFile(fileName);
+
+    // ✅ Lưu FULL PATH file vào ToolGateway để Agent có thể compile
+    if (typeof window !== "undefined") {
+      // ✅ Gửi full path (VD: "projects/led.ino") không extract chỉ filename
+      (window as any).setSelectedFileFromIDE?.(fileName);
+      console.log(`📝 Selected file saved to ToolGateway: ${fileName}`);
+    }
 
     // Detect language từ file extension
     const ext = fileName.split(".").pop()?.toLowerCase();
@@ -384,6 +425,48 @@ export function IDECode() {
     }
   };
 
+  // Handler: Create new file
+  const handleCreateNewFile = async (fileName: string) => {
+    if (!fileName.trim()) {
+      toast.error("Vui lòng nhập tên file");
+      return;
+    }
+
+    const success = await createNewFile(fileName, "");
+    if (success) {
+      toast.success(`Đã tạo file ${fileName}`);
+      setShowNewFileDialog(false);
+      await loadDirectoryEntries();
+    } else {
+      toast.error(`Lỗi khi tạo file ${fileName}`);
+    }
+  };
+
+  // Handler: Delete selected file
+  const handleDeleteFile = async () => {
+    if (!selectedFile) {
+      toast.error("Vui lòng chọn file để xóa");
+      return;
+    }
+
+    // Confirm dialog
+    if (
+      !confirm(`Bạn có chắc muốn xóa file "${selectedFile.split("/").pop()}"?`)
+    ) {
+      return;
+    }
+
+    const success = await deleteFileByName(selectedFile);
+    if (success) {
+      toast.success(`Đã xóa file ${selectedFile.split("/").pop()}`);
+      setSelectedFile("");
+      setCode(undefined);
+      await loadDirectoryEntries();
+    } else {
+      toast.error(`Lỗi khi xóa file ${selectedFile.split("/").pop()}`);
+    }
+  };
+
   if (!isAgentMode) return null;
 
   return (
@@ -416,11 +499,37 @@ export function IDECode() {
           )}
           {directoryHandle && (
             <>
+              {/* New File Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowNewFileDialog(true)}
+                className="gap-1"
+                title="Tạo file mới"
+              >
+                <FilePlus className="w-3 h-3" />
+              </Button>
+
+              {/* Delete File Button - chỉ hiện khi có file được chọn */}
+              {selectedFile && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeleteFile}
+                  className="gap-1 text-red-400 hover:text-red-600 hover:bg-[#e0e0e0]"
+                  title="Xóa file"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              )}
+
+              {/* Refresh Button */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => loadFileList()}
                 className="gap-1"
+                title="Refresh"
               >
                 <RefreshCw className="w-3 h-3" />
               </Button>
@@ -484,10 +593,9 @@ export function IDECode() {
                     sessionId={compileSessionId}
                     boardType={getBoardType(selectedBoard)}
                     onFlashComplete={(port) => {
-                      toast.success(
-                        "Flash hoàn tất! Port sẵn sàng cho Serial Monitor"
-                      );
                       setSerialPort(port);
+                      // ✅ Store port in toolGateway for TOOL_SERIAL_READ fallback
+                      toolGateway.setCurrentSerialPort(port);
                     }}
                   />
                 </>
@@ -546,7 +654,7 @@ export function IDECode() {
                       <Editor
                         height="100%"
                         width="100%"
-                        value={loading ? "// Loading..." : code}
+                        value={loading ? "Loading..." : code}
                         onChange={(value) => setCode(value)}
                         language={language}
                         theme="vs-dark"
@@ -579,6 +687,13 @@ export function IDECode() {
           )}
         </div>
       </div>
+
+      {/* New File Dialog */}
+      <NewFileDialog
+        open={showNewFileDialog}
+        onOpenChange={setShowNewFileDialog}
+        onCreateFile={handleCreateNewFile}
+      />
     </div>
   );
 }

@@ -54,7 +54,7 @@ export default function Home() {
       </div>
 
       {/*Giữ cố định input ở đáy */}
-      <div className={`absolute z-10 w-full py-4 mb-1 bg-transparent bottom-0 left-1/2 -translate-x-1/2 ${isAgentMode ? 'pl-4' : 'px-72'}`}>
+      <div className={`absolute z-10 w-full py-4 mb-1 bg-transparent bottom-0 left-1/2 -translate-x-1/2 ${isAgentMode ? 'pl-4' : '2xl:px-72 xl:px-44 lg:px-32 md:pl-12 md:pr-10 pl-4'}`}>
         <ChatInput onSend={handleStartChat} disabled={loading} />
       </div>
     </div>
