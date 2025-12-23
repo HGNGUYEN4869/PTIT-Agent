@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { LogMessage } from "@/types/webSocket";
 
-export function useWebSocketLogs(url: string | null): { logs: LogMessage[], isClosed: boolean } {
+export function useWebSocketLogs(url: string | null): { logs: LogMessage[]; isClosed: boolean } {
   const [logs, setLogs] = useState<LogMessage[]>([]);
-  const [isClosed, setIsClosed] = useState<boolean>(false);
+  const [isClosed, setIsClosed] = useState(false);
 
   useEffect(() => {
     // Không connect nếu url là null
     if (!url) {
       setLogs([]);
+      setIsClosed(false);
       return;
     }
 
@@ -33,6 +34,7 @@ export function useWebSocketLogs(url: string | null): { logs: LogMessage[], isCl
     };
 
     ws.onclose = () => {
+      console.log("WebSocket closed:", url);
       setIsClosed(true);
     };
 
@@ -43,6 +45,6 @@ export function useWebSocketLogs(url: string | null): { logs: LogMessage[], isCl
 
   return {
     logs,
-    isClosed,
+    isClosed
   };
 }

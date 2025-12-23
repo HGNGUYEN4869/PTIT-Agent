@@ -14,7 +14,6 @@ import { RootState } from "../../../store/store";
 import {
   clearChatState,
   triggerRefreshHistory,
-  setAgentMode,
 } from "../../../store/chatSlice";
 import { addMessage } from "../../api/messageFetch";
 import { UUID } from "crypto";
@@ -26,6 +25,7 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { formatMarkdown } from "@/helper/formatMarkdown";
 import { useAgentWS, AgentTask } from "@/app/webSocket";
 import { agentWSClient } from "@/app/webSocket/agentWSClient";
+import { FileAPI } from "@/lib/agentSystem";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -35,7 +35,6 @@ export default function ChatPage() {
   const chat = useSelector((state: RootState) => state.chat);
   const dispatch = useDispatch();
   const sentFromRedux = useRef(false);
-  const sendFirst = useRef<boolean>(true);
   const [successUpload, setSuccessUpload] = useState<boolean>(false);
   const messageEndRef = useRef<HTMLDivElement>(null);
   const params = useParams(); //{ idChat : 'abc123' }
@@ -48,10 +47,23 @@ export default function ChatPage() {
 
   const handleSend = async (text: string, file?: File | undefined) => {
     text = text.trim();
+
+    // Tạo user message (có hoặc không có attachment)
     const userMsg: Message = {
       role: MessageRole.USER,
       content: text,
+      // Nếu có file → tạo attachment info + preview URL
+      attachment: file
+        ? {
+            type: file.type.startsWith("image/") ? "image" : "file",
+            name: file.name,
+            mimeType: file.type,
+            size: file.size,
+            url: URL.createObjectURL(file), // Blob URL để preview ngay
+          }
+        : undefined,
     };
+
     setMessages((prev) => [...prev, userMsg]);
     await addMessage(userMsg, params.idChat as UUID);
     setLoading(true);
@@ -59,16 +71,18 @@ export default function ChatPage() {
     try {
       // === MODE 1: AGENT MODE (WebSocket) ===
       if (isAgentMode) {
-        console.log("🤖 Agent Mode: Using WebSocket");
-
         // Connect to Agent if not already connected
         if (!agentWS.isConnected) {
-          console.log("🔌 Connecting to Agent...");
           const connected = await agentWS.connect();
           if (!connected) {
             throw new Error("Failed to connect to Agent");
           }
         }
+        toolGateway.getDirectoryHandle();
+        const contentFile = await FileAPI.readFile(
+          toolGateway.getDirectoryHandle(),
+          toolGateway.getSelectedFile()
+        );
 
         // === Build query with context (6 last messages) ===
         // Tương tự RAG mode: lấy 6 tin nhắn gần nhất làm context
@@ -88,17 +102,19 @@ export default function ChatPage() {
           : text;
 
         // Send USER_QUERY to Agent (kèm context)
-        const success = agentWS.sendQuery(fullQueryText);
+        const success = agentWS.sendQuery(fullQueryText, {
+          content: contentFile,
+        });
         if (!success) {
           throw new Error("Failed to send query");
         }
 
-        console.log("📤 Query sent to Agent, waiting for AGENT_TASK...");
+        console.log("Query sent to Agent, waiting for AGENT_TASK...");
         // The AGENT_TASK will be handled by useEffect listener below
       }
       // === MODE 2: RAG MODE (HTTP) ===
       else {
-        console.log("📚 RAG Mode: Using HTTP API");
+        console.log("RAG Mode: Using HTTP API");
 
         let fileId: string | undefined;
 
@@ -144,12 +160,6 @@ export default function ChatPage() {
 
         // Tạo message trên db
         await addMessage(botMsg, params.idChat as UUID);
-
-        if (sendFirst.current) {
-          //  Trigger refresh history sidebar
-          dispatch(triggerRefreshHistory());
-          sendFirst.current = false;
-        }
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Lỗi máy chủ";
@@ -175,6 +185,10 @@ export default function ChatPage() {
         //set luôn sesionId tránh agent trả sessionId "" hoặc null
         agentTask.sessionId = agentWSClient.getSessionId();
         console.log("Received AGENT_TASK:", agentTask);
+
+        // Reset processedTaskIds khi nhận AGENT_TASK mới
+        processedTaskIds.current.clear();
+
         setCurrentTask(agentTask);
 
         // Display answer immediately
@@ -184,20 +198,15 @@ export default function ChatPage() {
             content: formatMarkdown(agentTask.answer) ?? agentTask.answer,
           };
 
-          if (sendFirst.current) {
-            dispatch(triggerRefreshHistory());
-            sendFirst.current = false;
-          }
-
           setMessages((prev) => [...prev, botMsg]);
-          console.log("✅ Answer displayed, waiting for tool execution...");
+          console.log("Answer displayed, waiting for tool execution...");
           //chỗ này cũng ưu tiên hiển thị ra giao diện thật nhanh tạo ux tốt
           await addMessage(botMsg, params.idChat as UUID);
         }
 
         // If no tool execution needed, clear loading immediately
         if (!agentTask.toolName || agentTask.toolName === "") {
-          console.log("✅ No tool execution needed, clearing loading state");
+          console.log("No tool execution needed, clearing loading state");
           setLoading(false);
         }
       }
@@ -211,10 +220,10 @@ export default function ChatPage() {
   useEffect(() => {
     if (!isAgentMode || !currentTask || !currentTask.toolName) return;
 
-    // ✅ Check if this task was already processed (deduplicate)
+    // Check if this task was already processed (deduplicate)
     const taskId = currentTask.sessionId;
     if (processedTaskIds.current.has(taskId)) {
-      console.log(`⏭️  Task already processed, skipping: ${taskId}`);
+      console.log(`Task already processed, skipping: ${taskId}`);
       return;
     }
     processedTaskIds.current.add(taskId);
@@ -224,7 +233,7 @@ export default function ChatPage() {
     const executeTask = async () => {
       try {
         console.log(
-          `⚙️  Executing tool via ToolGateway: ${currentTask.toolName}`
+          `Executing tool via ToolGateway: ${currentTask.toolName}`
         );
 
         // Route task to toolGateway for execution (direct execute, no queue)
@@ -239,7 +248,7 @@ export default function ChatPage() {
           if (!isMounted) return;
 
           if (event.sessionId === currentTask.sessionId) {
-            console.log("✅ Tool executed via ToolGateway");
+            console.log("Tool executed via ToolGateway");
 
             // Get the task result from toolGateway
             const taskStatus = toolGateway.getLastTaskResult();
@@ -259,13 +268,13 @@ export default function ChatPage() {
                 currentTask.sessionId,
                 "success",
                 taskStatus.result,
-                contextText // ✅ Gửi lịch sử conversation
+                contextText // Gửi lịch sử conversation
               );
 
               if (success) {
-                console.log("✅ TOOL_RESULT sent to Agent");
+                console.log("TOOL_RESULT sent to Agent");
               } else {
-                console.error("❌ Failed to send TOOL_RESULT");
+                console.error("Failed to send TOOL_RESULT");
               }
             }
 
@@ -279,7 +288,7 @@ export default function ChatPage() {
 
         toolGateway.on("task_completed", onTaskCompleted);
       } catch (error) {
-        console.error("❌ Tool execution error:", error);
+        console.error("Tool execution error:", error);
 
         if (!isMounted) return;
 
@@ -300,7 +309,7 @@ export default function ChatPage() {
           currentTask.sessionId,
           "error",
           { message: errorMsg },
-          contextText // ✅ Gửi lịch sử context với error
+          contextText // Gửi lịch sử context với error
         );
         processedTaskIds.current.clear();
         setCurrentTask(null);
@@ -353,7 +362,7 @@ export default function ChatPage() {
       <div className="relative flex flex-col h-full overflow-y-scroll bg-transparent content-wrap">
         {messages.length === 0 && (
           <div className="absolute text-2xl font-semibold text-center transform -translate-x-1/2 -translate-y-1/2 bg-transparent pointer-events-none select-none top-1/2 left-1/2 text-muted-foreground z-3">
-            Xin chào Tôi là PTIT Agent của bạn!
+            Xin chào Tôi là PTIT Agent của bạn
           </div>
         )}
 
@@ -377,6 +386,7 @@ export default function ChatPage() {
                 key={`${index}-${m.content.substring(0, 30)}`}
                 role={m.role}
                 content={m.content}
+                attachment={m.attachment}
               />
             ))}
             {loading && (

@@ -129,16 +129,16 @@ export function IDECode() {
     autoSave();
   }, [debouncedCode, selectedFile, loading, updateFileContent]);
 
-  // ✅ Listen for file_updated event from toolGateway
+  // Listen for file_updated event from toolGateway
   useEffect(() => {
     const handler = async (event: any) => {
       const { fileName, toolName } = event;
 
-      console.log(`📝 File updated event received: ${fileName} (${toolName})`);
+      console.log(`File updated event received: ${fileName} (${toolName})`);
 
       // Nếu file đang được display trong editor thì reload
       if (fileName === selectedFile) {
-        console.log(`🔄 Reloading file: ${selectedFile}`);
+        console.log(`Reloading file: ${selectedFile}`);
 
         try {
           const freshContent = await readFileContent(selectedFile);
@@ -150,6 +150,9 @@ export function IDECode() {
         } catch (error) {
           toast.error(`Failed to update file: ${error}`);
         }
+      } else {
+        await loadFileList();
+        handleFileClick(fileName);
       }
 
       // Nếu là DELETE thì clear file explorer
@@ -290,11 +293,11 @@ export function IDECode() {
     setLoading(true);
     setSelectedFile(fileName);
 
-    // ✅ Lưu FULL PATH file vào ToolGateway để Agent có thể compile
+    // Lưu FULL PATH file vào ToolGateway để Agent có thể compile
     if (typeof window !== "undefined") {
-      // ✅ Gửi full path (VD: "projects/led.ino") không extract chỉ filename
+      // Gửi full path (VD: "projects/led.ino") không extract chỉ filename
       (window as any).setSelectedFileFromIDE?.(fileName);
-      console.log(`📝 Selected file saved to ToolGateway: ${fileName}`);
+      console.log(`Selected file saved to ToolGateway: ${fileName}`);
     }
 
     // Detect language từ file extension
@@ -382,10 +385,18 @@ export function IDECode() {
     }
 
     setIsCompiling(true);
-    // Generate unique session ID
+    // Tạo sessionId mới cho compile này
     const newSessionId = `compile-${Date.now()}-${Math.random()
       .toString(36)
       .slice(2, 9)}`;
+
+      //đang có bug liên quan đến lưu trùng file trong cùng cache sketch trong be cần lưu ý
+    //Bắt buộc: Set sessionId vào toolGateway TRƯỚC khi compile
+    // Điều này cho phép các trường hợp:
+    // 1. User compile + User flash thủ công → FlashBoard lấy sessionId từ props
+    // 2. Agent compile + User flash thủ công → FlashBoard lấy sessionId từ toolGateway
+    // 3. Agent compile + Agent flash → ToolGateway dùng sessionId của chính nó
+    toolGateway.setupCachedSessionIdCompile(newSessionId);
 
     // Set sessionId TRƯỚC để WebSocket connect trước khi compile
     setCompileSessionId(newSessionId);
@@ -594,7 +605,7 @@ export function IDECode() {
                     boardType={getBoardType(selectedBoard)}
                     onFlashComplete={(port) => {
                       setSerialPort(port);
-                      // ✅ Store port in toolGateway for TOOL_SERIAL_READ fallback
+                      // Store port in toolGateway for TOOL_SERIAL_READ fallback
                       toolGateway.setCurrentSerialPort(port);
                     }}
                   />

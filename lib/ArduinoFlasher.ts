@@ -102,7 +102,7 @@ export class ArduinoFlasher {
       try {
         await this.writer.write(cmd);
         const response: number[] = [];
-        const deadline = Date.now() + 4000; // 4s
+        const deadline = Date.now() + 6000; // 6s (bootloader chậm)
 
         while (Date.now() < deadline) {
           const { value, done } = await this.reader.read();
@@ -129,16 +129,20 @@ export class ArduinoFlasher {
 
   /** Đồng bộ với bootloader */
   private async sync(): Promise<void> {
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 15; i++) {
       try {
-        const res = await this.sendCommand([STK_GET_SYNC]);
-        if (res[0] === STK_INSYNC && res[1] === STK_OK) return;
-      } catch {
+        const res = await this.sendCommand([STK_GET_SYNC], 2);
+        if (res[0] === STK_INSYNC && res[1] === STK_OK) {
+          console.log("✅ Bootloader synced successfully");
+          return;
+        }
+      } catch (err) {
+        console.log(`Sync attempt ${i + 1} failed, retrying...`);
         //delay chờ bật bootloader
-        await new Promise((r) => setTimeout(r, 1500));
+        await new Promise((r) => setTimeout(r, 500));
       }
     }
-    throw new Error("Không thể sync với bootloader");
+    throw new Error("Không thể sync với bootloader sau 15 lần thử");
   }
 
   /** Tự reset nếu board hỗ trợ */
@@ -274,24 +278,43 @@ export class ArduinoFlasher {
         //  Reset UNO bằng trick double-open 1200bps (giống avrdude)
         try {
           console.log("Đang reset board bằng 1200bps trick...");
+
+          // QUAN TRỌNG: Release reader/writer TRƯỚC khi close port
           try {
-            // Nếu port đang mở, đóng lại trước
+            if (this.reader) {
+              this.reader.releaseLock();
+              this.reader = undefined;
+            }
+            if (this.writer) {
+              this.writer.releaseLock();
+              this.writer = undefined;
+            }
+          } catch (releaseErr) {
+            console.warn("Cannot release lock:", releaseErr);
+          }
+
+          // Nếu port đang mở, đóng lại trước
+          try {
             if (this.port.readable || this.port.writable) {
-              await this.port.close().catch(() => {});
-              await new Promise((r) => setTimeout(r, 300));
+              await this.port.close();
+              console.log("Port closed before 1200bps reset");
             }
           } catch {}
 
+          // Chờ port close hoàn toàn
+          await new Promise((r) => setTimeout(r, 500));
+
           // Bước 1: mở port ở 1200 baud
           await this.port.open({ baudRate: 1200 });
+          console.log("Port opened at 1200bps");
           await new Promise((r) => setTimeout(r, 300));
           await this.port.close();
           console.log(
             "Đã gửi tín hiệu reset qua 1200bps, chờ bootloader khởi động..."
           );
 
-          // Bước 2: chờ bootloader bật (~500ms)
-          await new Promise((r) => setTimeout(r, 500));
+          // Bước 2: chờ bootloader bật (~800ms)
+          await new Promise((r) => setTimeout(r, 800));
 
           // Bước 3: mở lại port ở baud thực để nạp
           await this.port.open({ baudRate: baud });
@@ -365,7 +388,10 @@ export class ArduinoFlasher {
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         toast.error(`Flash failed at baud ${baud}: ${error.message}`);
-        if (error.message?.includes("Timeout") || error.message?.includes("sync")) {
+        if (
+          error.message?.includes("Timeout") ||
+          error.message?.includes("sync")
+        ) {
           this.onProgress?.({
             percentage: 0,
             message: `Timeout tại baud ${baud}, thử baud khác...`,
@@ -373,19 +399,33 @@ export class ArduinoFlasher {
         }
       } finally {
         try {
+          // QUAN TRỌNG: Release lock TRƯỚC cancel/close
           if (this.reader) {
-            await this.reader.cancel();
-            this.reader.releaseLock();
+            try {
+              this.reader.releaseLock();
+            } catch {}
+            this.reader = undefined;
           }
           if (this.writer) {
-            this.writer.releaseLock();
+            try {
+              this.writer.releaseLock();
+            } catch {}
+            this.writer = undefined;
           }
-          if (this.port && (this.port.readable || this.port.writable)) {
-            await this.port.close();
-            console.log("Port closed after flash attempt");
+
+          // Giờ mới close port
+          if (this.port) {
+            try {
+              if (this.port.readable || this.port.writable) {
+                await this.port.close();
+                console.log("✅ Port closed successfully");
+              }
+            } catch (closeErr) {
+              console.warn("Error while closing port:", closeErr);
+            }
           }
-        } catch (closeErr) {
-          console.warn("Error while closing port:", closeErr);
+        } catch (finalErr) {
+          console.warn("Error in finally block:", finalErr);
         }
       }
     }

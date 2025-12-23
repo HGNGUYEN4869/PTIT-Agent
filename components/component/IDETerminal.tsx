@@ -9,32 +9,24 @@ type IDETerminalProps = {
 
 const IDETerminal = ({ sessionId }: IDETerminalProps) => {
   const wsRef = useRef<HTMLDivElement>(null);
-  const logsRef = useRef<string[]>([]); // ✅ Track logs từ hook
+  const logsRef = useRef<string[]>([]); // Track logs từ hook
   // State để track sessionId từ 2 nguồn:
   // 1. Từ props (user compile local test) → isAgentCompile = false
   // 2. Từ event (Agent compile) → isAgentCompile = true
   const [wsSessionId, setWsSessionId] = useState<string>(sessionId);
-  const [isAgentCompile, setIsAgentCompile] = useState(false); // ✅ Distinguish Agent vs Local
+  const [isAgentCompile, setIsAgentCompile] = useState(false); // Distinguish Agent vs Local
 
-  // ✅ Sync khi props sessionId thay đổi (user compile local)
+  // Sync khi props sessionId thay đổi (user compile local)
   useEffect(() => {
     if (sessionId) {
       setWsSessionId(sessionId);
       setIsAgentCompile(false); // ← Local compile, không phải Agent
-      console.log(
-        "📝 IDETerminal received new sessionId from props (LOCAL):",
-        sessionId
-      );
     }
   }, [sessionId]);
 
-  // ✅ Subscribe event từ ToolGateway khi Agent execute compile
+  // Subscribe event từ ToolGateway khi Agent execute compile
   useEffect(() => {
     const handleCompileStarted = (data: any) => {
-      console.log(
-        "🔗 Agent compile started, updating terminal WS sessionId:",
-        data.sessionId
-      );
       setIsAgentCompile(true); // ← Agent compile
       setWsSessionId(data.sessionId); // Update ws URL động
     };
@@ -53,26 +45,25 @@ const IDETerminal = ({ sessionId }: IDETerminalProps) => {
 
   const { logs, isClosed } = useWebSocketLogs(wsUrl);
 
-  // ✅ Track logs từ hook vào ref
+  // Reset logs khi wsSessionId thay đổi (new compile session)
+  useEffect(() => {
+    logsRef.current = [];
+  }, [wsSessionId]);
+
+  // Track logs từ hook vào ref
   useEffect(() => {
     logsRef.current = logs.map((log) => log.message);
   }, [logs]);
 
-  // ✅ Emit logs_collected khi:
-  // 1. isClosed = true (WS vừa close)
-  // 2. isAgentCompile = true (Agent mode, không phải local)
-  // 3. logs có dữ liệu
+  // Emit logs_collected ngay khi có logs (không chờ WS close)
   useEffect(() => {
-    if (logsRef.current.length > 0 && isClosed && isAgentCompile) {
-      console.log(
-        `📤 Agent compile done, emitting ${logsRef.current.length} logs`
-      );
-      // ✅ Emit logs_collected để toolGateway lưu lại
+    if (logsRef.current.length > 0) {
+      // Emit logs_collected để toolGateway lưu lại
       toolGateway.emit("logs_collected", {
         logs: logsRef.current.join("\n"),
       });
     }
-  }, [isClosed, isAgentCompile]);
+  }, [logs]);
   useEffect(() => {
     const el = wsRef.current;
     if (!el) return;
