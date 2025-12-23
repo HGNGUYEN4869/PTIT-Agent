@@ -34,7 +34,6 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
 
   // Mở port và bắt đầu đọc data
   const connectSerial = async () => {
-    await disconnect();
     if (!serialPort) {
       toast.error("Không có port nào được chọn. Vui lòng flash code trước.");
       return;
@@ -99,7 +98,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
 
     const decoder = new TextDecoder();
     readerRef.current = serialPort.readable.getReader();
-    let buffer = ""; // ✅ Accumulate partial data
+    let buffer = ""; // Accumulate partial data
 
     try {
       while (true) {
@@ -109,7 +108,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
         if (value) {
           buffer += decoder.decode(value);
 
-          // ✅ Split by newline & add complete lines only
+          // Split by newline & add complete lines only
           const lines = buffer.split("\n");
           buffer = lines.pop() || ""; // Keep incomplete line in buffer
 
@@ -175,7 +174,6 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
       }
 
       setIsConnected(false);
-      toast.info("Đã ngắt kết nối Serial Monitor");
     } catch {
       toast.error("Lỗi khi ngắt kết nối");
     }
@@ -187,7 +185,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
     el.scrollTop = el.scrollHeight;
   }, [logs]);
 
-  // ✅ Setup listener for ToolGateway's request_serial_data event
+  // Setup listener for ToolGateway's request_serial_data event
   useEffect(() => {
     const handleRequestSerialData = () => {
       // Emit current logs to ToolGateway
@@ -208,12 +206,12 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
     };
   }, [logs, isConnected]);
 
-  // // Cleanup khi unmount
-  // useEffect(() => {
-  //   return () => {
-  //     disconnect();
-  //   };
-  // }, []);
+  // Cleanup khi unmount
+  useEffect(() => {
+    return () => {
+      disconnect();
+    };
+  }, []);
 
   return (
     <div className="flex flex-col">
@@ -225,7 +223,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
             onValueChange={(value) => {
               const newBaudRate = Number(value);
               setBaudRate(newBaudRate);
-              // ✅ Emit baudRate to toolGateway whenever user changes it
+              // Emit baudRate to toolGateway whenever user changes it
               toolGateway.setCurrentBaudRate(newBaudRate);
             }}
             disabled={isConnected}

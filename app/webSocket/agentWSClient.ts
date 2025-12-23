@@ -119,7 +119,7 @@ export class AgentWebSocketClient {
    * Send USER_QUERY to Agent
    * Query bao gồm câu hỏi + context 6 tin nhắn gần nhất
    */
-  sendUserQuery(query: string): boolean {
+  sendUserQuery(query: string, result?: Record<string, any>): boolean {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       console.error("❌ WebSocket not connected");
       return false;
@@ -128,6 +128,7 @@ export class AgentWebSocketClient {
     const userQuery: UserQuery = {
       sessionId: this.sessionId,
       query, // Đã chứa context từ page.tsx
+      result: result,
     };
 
     const message: WebSocketMessage = {
@@ -148,8 +149,8 @@ export class AgentWebSocketClient {
   /**
    * Send CHAT_QUERY to Agent (deprecated - use sendUserQuery instead)
    */
-  sendChatQuery(query: string): boolean {
-    return this.sendUserQuery(query);
+  sendChatQuery(query: string, result?: Record<string, any>): boolean {
+    return this.sendUserQuery(query, result);
   }
 
   /**

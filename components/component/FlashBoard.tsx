@@ -25,15 +25,34 @@ export default function FlashAllBoards({
   onFlashComplete,
 }: FlashAllBoardsProps) {
   const [isFlashing, setIsFlashing] = useState(false);
+  const [hasFlashed, setHasFlashed] = useState(false); // Disable after first successful flash
 
-  // ✅ Listen for "start_flash" event from ToolGateway (TOOL_UPLOAD_FIRMWARE)
+  //  Listen for "start_flash" event from ToolGateway (TOOL_UPLOAD_FIRMWARE)
   useEffect(() => {
     toolGateway.on("start_flash", handleFlash);
 
     return () => {
       toolGateway.removeListener("start_flash", handleFlash);
     };
-  }, [sessionId, boardType]);
+  }, [boardType]);
+
+  // Reset hasFlashed when sessionId changes (new compile)
+  useEffect(() => {
+    setHasFlashed(false);
+  }, [sessionId]);
+
+  // Also reset hasFlashed when Agent starts compile
+  useEffect(() => {
+    const handleCompileStarted = () => {
+      setHasFlashed(false);
+    };
+
+    toolGateway.on("compile_started", handleCompileStarted);
+
+    return () => {
+      toolGateway.removeListener("compile_started", handleCompileStarted);
+    };
+  }, []);
 
   /**Tự nhận diện board theo vendorId */
   async function detectBoard(): Promise<{ type: string; port?: SerialPort }> {
@@ -50,7 +69,7 @@ export default function FlashAllBoards({
       //Đảm bảo port được đóng hoàn toàn trước khi detect
       if (port.readable || port.writable) {
         try {
-          console.log("Port đang mở, đóng lại để detect...");
+          // console.log("Port đang mở, đóng lại để detect...");
 
           // QUAN TRỌNG: Phải release reader/writer trước khi đóng port
           if (port.readable?.locked) {
@@ -63,7 +82,7 @@ export default function FlashAllBoards({
           }
 
           await port.close();
-          console.log("Port đã đóng");
+          // console.log("Port đã đóng");
 
           // Đợi port được giải phóng hoàn toàn
           await new Promise((resolve) => setTimeout(resolve, 500));
@@ -74,13 +93,12 @@ export default function FlashAllBoards({
       }
 
       //Giờ mở port để detect board type
-      console.log("Đang mở port để detect board...");
       await port.open({ baudRate: 115200 });
 
       const info = port.getInfo();
       const vid = info.usbVendorId;
 
-      console.log(`Detected VID: 0x${vid?.toString(16)}`);
+      // console.log(`Detected VID: 0x${vid?.toString(16)}`);
 
       // Detect board type
       let boardType: string;
@@ -108,14 +126,13 @@ export default function FlashAllBoards({
       return { type: boardType, port };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
-      console.error("Detect board error:", err);
       toast.error(`Không tìm thấy board: ${err.message}`);
       throw new Error("Không tìm thấy board nào!");
     }
   }
 
   /** Nạp code cho Arduino UNO */
-  async function flashUNO(port: SerialPort) {
+  async function flashUNO(port: SerialPort, sessionId?: string) {
     if (!sessionId) {
       toast.error("Thiếu sessionId! Vui lòng compile code trước.");
       throw new Error("Missing sessionId");
@@ -127,11 +144,8 @@ export default function FlashAllBoards({
       const blob = await downloadUnoFirmware(sessionId);
       const hexContent = await blob.text();
 
-      console.log("Hex file downloaded, size:", hexContent.length, "bytes");
-
       // 2. Tạo Arduino Flasher với progress callback
       const flasher = new ArduinoFlasher(port, (progress) => {
-        console.log(`Progress: ${progress.percentage}% - ${progress.message}`);
         toast.info(`${progress.message} (${progress.percentage}%)`);
       });
 
@@ -169,14 +183,14 @@ export default function FlashAllBoards({
       }
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
-      console.error("Flash UNO error:", err);
+      // console.error("Flash UNO error:", err);
       toast.error(`Lỗi nạp code: ${err.message || String(err)}`);
       throw error;
     }
   }
 
   /**Nạp code cho ESP32/ESP8266 */
-  async function flashESP32(port: SerialPort) {
+  async function flashESP32(port: SerialPort, sessionId?: string) {
     if (!sessionId) {
       toast.error("Vui lòng compile code trước.");
       throw new Error("Missing sessionId");
@@ -188,17 +202,17 @@ export default function FlashAllBoards({
       const blob = await downloadEsp32Firmware(sessionId);
       const binData = await blob.arrayBuffer();
 
-      console.log(
-        "ESP32/ESP8266 firmware downloaded, size:",
-        binData.byteLength,
-        "bytes"
-      );
+      // console.log(
+      //   "ESP32/ESP8266 firmware downloaded, size:",
+      //   binData.byteLength,
+      //   "bytes"
+      // );
 
       // 2. Tạo ESP32 Flasher với progress callback
       const flasher = new ESP32Flasher(port, (progress) => {
-        console.log(
-          `ESP32/ESP8266 Progress: ${progress.percentage}% - ${progress.message}`
-        );
+        // console.log(
+        //   `ESP32/ESP8266 Progress: ${progress.percentage}% - ${progress.message}`
+        // );
         toast.info(`${progress.message} (${progress.percentage}%)`);
       });
 
@@ -220,7 +234,7 @@ export default function FlashAllBoards({
       }
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
-      console.error("Flash ESP32/ESP8266 error:", err);
+      // console.error("Flash ESP32/ESP8266 error:", err);
 
       // Hiển thị hướng dẫn chi tiết dựa vào loại lỗi
       const errorMsg = err.message || err.toString();
@@ -257,10 +271,10 @@ export default function FlashAllBoards({
         // Đóng port nếu đang mở
         if (port.readable || port.writable) {
           await port.close();
-          console.log("✅ Port đã được đóng và giải phóng");
+          // console.log("Port đã được đóng và giải phóng");
         }
       } catch (closeErr) {
-        console.warn("Không thể đóng port (có thể đã đóng rồi):", closeErr);
+        // console.warn("Không thể đóng port (có thể đã đóng rồi):", closeErr);
       }
     }
   }
@@ -314,14 +328,26 @@ export default function FlashAllBoards({
   }
 
   /** Bắt đầu quy trình nạp */
-  async function handleFlash() {
+  async function handleFlash(event?: { sessionId: string }) {
+    // sessionId từ event → props → toolGateway cache
+    let flashSessionId = event?.sessionId || sessionId;
+
+    // Fallback: Lấy từ toolGateway nếu không có từ props/event (Agent compile + User flash)
+    if (!flashSessionId) {
+      flashSessionId = toolGateway.getCachedSessionIdCompile();
+    }
+
+    if (!flashSessionId) {
+      toast.error("Thiếu sessionId! Vui lòng compile code trước.");
+      return;
+    }
     setIsFlashing(true);
     toast.info("Đang dò thiết bị");
     try {
       let board: { type: string; port?: SerialPort };
 
       // Nếu đã có boardType từ compile step, ưu tiên dùng nó
-      if (boardType) {
+      if (boardType && flashSessionId) {
         if (boardType === "STM32") {
           board = { type: "STM32" };
         } else {
@@ -338,36 +364,45 @@ export default function FlashAllBoards({
         toast.success(`Phát hiện board: ${board.type}`);
       }
 
-      if (board.type === "UNO" && board.port) await flashUNO(board.port);
+      if (board.type === "UNO" && board.port)
+        await flashUNO(board.port, flashSessionId);
       else if (board.type === "ESP8266" && board.port)
-        await flashESP32(board.port); // ESP8266 dùng cùng flasher với ESP32
+        await flashESP32(board.port, flashSessionId);
+      // ESP8266 dùng cùng flasher với ESP32
       else if (board.type === "ESP32" && board.port)
-        await flashESP32(board.port);
+        await flashESP32(board.port, flashSessionId);
       else if (board.type === "STM32") await flashSTM32();
       else throw new Error("Board không được hỗ trợ nạp tự động!");
 
-      // ✅ EMIT SUCCESS EVENT to ToolGateway
-      console.log("📡 Emitting flash_complete event to ToolGateway...");
+      //  EMIT SUCCESS EVENT to ToolGateway
       toolGateway.emit("flash_complete", {
         boardType: board.type,
         port: board.port,
+        flashSessionId,
         timestamp: Date.now(),
       });
 
-      // ✅ Also call callback for IDECode if provided (backward compatibility)
+      //  Also call callback for IDECode if provided (backward compatibility)
       if (onFlashComplete && board.port) {
         onFlashComplete(board.port);
       }
+
+      // Mark as flashed - disable button until new compile
+      setHasFlashed(true);
+
+      // Clear sessionId từ toolGateway sau khi flash thành công
+      // để tránh bị dùng lại cho session tiếp theo
+      toolGateway.clearCachedSessionIdCompile();
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       toast.error(`Lỗi nạp code: ${error.message}`);
-
-      // ✅ EMIT ERROR EVENT to ToolGateway
-      console.log("📡 Emitting flash_error event to ToolGateway...");
       toolGateway.emit("flash_error", {
         message: error.message,
+        flashSessionId,
         timestamp: Date.now(),
       });
+      // Vẫn clear sessionId ngay cả khi lỗi để không bị stuck
+      toolGateway.clearCachedSessionIdCompile();
     } finally {
       setIsFlashing(false);
     }
@@ -376,10 +411,16 @@ export default function FlashAllBoards({
   return (
     <div className="flex gap-2 items-center">
       <Button
-        disabled={isFlashing || !sessionId}
-        onClick={handleFlash}
+        disabled={isFlashing || !sessionId || hasFlashed}
+        onClick={() => handleFlash()}
         size="sm"
-        title={!sessionId ? "Vui lòng compile code trước" : ""}
+        title={
+          hasFlashed
+            ? "Đã nạp xong! Compile code mới để nạp lại"
+            : !sessionId
+            ? "Vui lòng compile code trước"
+            : ""
+        }
         className="bg-[#252525] hover:bg-[#313131] text-white"
       >
         {isFlashing ? (

@@ -21,7 +21,7 @@ export interface UseAgentWSState {
 export interface UseAgentWSActions {
   connect: () => Promise<boolean>;
   disconnect: () => void;
-  sendQuery: (query: string) => boolean;
+  sendQuery: (query: string, result?: Record<string, any>) => boolean;
   sendToolResult: (
     sessionId: string,
     status: "success" | "error" | "timeout",
@@ -166,13 +166,13 @@ export function useAgentWS(): UseAgentWSState & UseAgentWSActions {
   /**
    * Send chat query to Agent
    */
-  const sendQuery = useCallback((query: string): boolean => {
+  const sendQuery = useCallback((query: string, result?: Record<string, any>): boolean => {
     if (!agentWSClient.isConnected()) {
       console.error("❌ WebSocket not connected");
       return false;
     }
 
-    return agentWSClient.sendChatQuery(query);
+    return agentWSClient.sendChatQuery(query, result);
   }, []);
 
   /**

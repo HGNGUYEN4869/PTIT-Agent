@@ -34,6 +34,7 @@ export interface ToolResult {
 export interface UserQuery {
   sessionId: string;
   query: string; // Câu hỏi kèm context 6 tin nhắn gần nhất
+  result?: Record<string, any>; // ✅ Optional - previous tool results or context
 }
 
 export interface ErrorPayload {
