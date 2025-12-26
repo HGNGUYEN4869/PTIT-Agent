@@ -11,10 +11,7 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../../store/store";
-import {
-  clearChatState,
-  triggerRefreshHistory,
-} from "../../../store/chatSlice";
+import { clearChatState, triggerRefreshHistory } from "../../../store/chatSlice";
 import { addMessage } from "../../api/messageFetch";
 import { UUID } from "crypto";
 import { getDetailChat } from "@/app/api/chatFetch";
@@ -26,6 +23,7 @@ import { formatMarkdown } from "@/helper/formatMarkdown";
 import { useAgentWS, AgentTask } from "@/app/webSocket";
 import { agentWSClient } from "@/app/webSocket/agentWSClient";
 import { FileAPI } from "@/lib/agentSystem";
+import { ApiResponse, ragResponse } from "@/types/common";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -149,11 +147,14 @@ export default function ChatPage() {
           ? `Lịch sử hội thoại:\n${contextText}\n\nCâu hỏi hiện tại:\nUser: ${text}`
           : text;
 
-        const data = await ragQuery(fullQueryText);
-
+        const ragQueryRes: ApiResponse<ragResponse> = await ragQuery(
+          fullQueryText
+        );
         const botMsg: Message = {
           role: MessageRole.ASSISTANT,
-          content: formatMarkdown(data.answer) ?? "Không có phản hồi từ server",
+          content:
+            formatMarkdown(ragQueryRes.data?.answer) ??
+            "Không có phản hồi từ server",
         };
         //ưu tiên tốc độ hiển thị đưa ra ui trước
         setMessages((prev) => [...prev, botMsg]);
@@ -232,9 +233,7 @@ export default function ChatPage() {
 
     const executeTask = async () => {
       try {
-        console.log(
-          `Executing tool via ToolGateway: ${currentTask.toolName}`
-        );
+        console.log(`Executing tool via ToolGateway: ${currentTask.toolName}`);
 
         // Route task to toolGateway for execution (direct execute, no queue)
         const taskWithCorrectType = {
@@ -268,7 +267,7 @@ export default function ChatPage() {
                 currentTask.sessionId,
                 "success",
                 taskStatus.result,
-                contextText // Gửi lịch sử conversation
+                currentTask.status === "success" ? "" : contextText // Gửi lịch sử conversation
               );
 
               if (success) {
@@ -347,11 +346,13 @@ export default function ChatPage() {
     } else if ((chat.input || chat.file) && !sentFromRedux.current) {
       // nếu có input hoặc file từ redux => gửi ngay
       handleSend(chat.input, chat.file);
+      dispatch(triggerRefreshHistory());
       dispatch(clearChatState());
       sentFromRedux.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chat.input, chat.file]);
+    // }, [chat.input, chat.file]);
+  }, []);
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });

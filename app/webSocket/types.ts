@@ -5,10 +5,12 @@
 
 export interface AgentTask {
   sessionId: string;
-  timestamp?: number; // ✅ Optional
+  taskId?: string;
+  timestamp?: number;
   answer: string;
-  toolName?: string; // ✅ Optional - if no tool, just display answer
-  params?: Record<string, any>; // ✅ Optional
+  toolName?: string; // if no tool, just display answer
+  params?: Record<string, any>;
+  status?: string;
   priority?: number;
   timeout?: number;
   retryCount?: number;
@@ -34,7 +36,7 @@ export interface ToolResult {
 export interface UserQuery {
   sessionId: string;
   query: string; // Câu hỏi kèm context 6 tin nhắn gần nhất
-  result?: Record<string, any>; // ✅ Optional - previous tool results or context
+  result?: Record<string, any>;// previous tool results or context
 }
 
 export interface ErrorPayload {
