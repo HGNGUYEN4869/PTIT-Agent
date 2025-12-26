@@ -1,4 +1,5 @@
-export function formatMarkdown(content: string): string {
+export function formatMarkdown(content: string | undefined): string {
+    if (!content) return "";
     return (
       content
         // Chuyển [IMAGE: ...] thành thẻ <img>

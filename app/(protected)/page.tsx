@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   setInput,
   setFile,
-  triggerRefreshHistory,
 } from "../../store/chatSlice";
 import { RootState } from "../../store/store";
 import { ChatInput } from "@/components/component/ChatInput";
@@ -37,7 +36,6 @@ export default function Home() {
       if (response.idChat) {
         // Chuyển hướng đến trang chat với chatId mới
         router.push(`/${response.idChat}`);
-        dispatch(triggerRefreshHistory());
       } else {
         console.error("Failed to create chat: no chatId returned");
       }

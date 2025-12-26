@@ -24,6 +24,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
   const [input, setInput] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [baudRate, setBaudRate] = useState(9600);
+  const [serial, setSerrial] = useState<SerialPort | null>(null); // Dummy state to force re-render
   const scrollRef = useRef<HTMLDivElement>(null);
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(
     null
@@ -95,7 +96,7 @@ export function SerialMonitor({ serialPort }: SerialMonitorProps) {
   // Đọc data từ serial port
   const startReading = async () => {
     if (!serialPort || !serialPort.readable) return;
-
+    setSerrial(serialPort); // Force re-render
     const decoder = new TextDecoder();
     readerRef.current = serialPort.readable.getReader();
     let buffer = ""; // Accumulate partial data
