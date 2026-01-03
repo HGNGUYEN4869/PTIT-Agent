@@ -6,12 +6,13 @@ import { ChatInput } from "@/components/component/ChatInput";
 import { Message, MessageRole } from "@/types/message";
 import { uploadRagFile } from "../../api/uploadFile";
 import { ragQuery } from "../../api/ragQuery";
-import { CheckCircle2Icon } from "lucide-react";
-import { Alert, AlertTitle } from "@/components/ui/alert";
 import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../../store/store";
-import { clearChatState, triggerRefreshHistory } from "../../../store/chatSlice";
+import {
+  clearChatState,
+  triggerRefreshHistory,
+} from "../../../store/chatSlice";
 import { addMessage } from "../../api/messageFetch";
 import { UUID } from "crypto";
 import { getDetailChat } from "@/app/api/chatFetch";
@@ -33,7 +34,6 @@ export default function ChatPage() {
   const chat = useSelector((state: RootState) => state.chat);
   const dispatch = useDispatch();
   const sentFromRedux = useRef(false);
-  const [successUpload, setSuccessUpload] = useState<boolean>(false);
   const messageEndRef = useRef<HTMLDivElement>(null);
   const params = useParams(); //{ idChat : 'abc123' }
 
@@ -120,10 +120,7 @@ export default function ChatPage() {
         if (file) {
           const uploadRes = await uploadRagFile(file);
           fileId = uploadRes.data.file;
-          setSuccessUpload(true);
-          setTimeout(() => {
-            setSuccessUpload(false);
-          }, 2000);
+          toast.success("Upload file thành công");
         }
 
         if (text.trim() === "") {
@@ -238,6 +235,7 @@ export default function ChatPage() {
         // Route task to toolGateway for execution (direct execute, no queue)
         const taskWithCorrectType = {
           ...currentTask,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           toolName: currentTask.toolName as any,
         };
         toolGateway.receiveAgentTask(taskWithCorrectType);
@@ -373,14 +371,6 @@ export default function ChatPage() {
             isAgentMode ? "px-4" : "2xl:px-72 xl:px-44 lg:px-32 md:px-12 px-4"
           }`}
         >
-          {successUpload && (
-            <div className="absolute top-0 right-0">
-              <Alert>
-                <CheckCircle2Icon />
-                <AlertTitle>File upload thành công</AlertTitle>
-              </Alert>
-            </div>
-          )}
           <div className="flex flex-col w-full gap-4">
             {messages.map((m, index) => (
               <ChatMessage

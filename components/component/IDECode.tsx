@@ -131,6 +131,7 @@ export function IDECode() {
 
   // Listen for file_updated event from toolGateway
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handler = async (event: any) => {
       const { fileName, toolName } = event;
 
@@ -296,6 +297,7 @@ export function IDECode() {
     // Lưu FULL PATH file vào ToolGateway để Agent có thể compile
     if (typeof window !== "undefined") {
       // Gửi full path (VD: "projects/led.ino") không extract chỉ filename
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).setSelectedFileFromIDE?.(fileName);
       console.log(`Selected file saved to ToolGateway: ${fileName}`);
     }
@@ -390,7 +392,7 @@ export function IDECode() {
       .toString(36)
       .slice(2, 9)}`;
 
-      //đang có bug liên quan đến lưu trùng file trong cùng cache sketch trong be cần lưu ý
+    //đang có bug liên quan đến lưu trùng file trong cùng cache sketch trong be cần lưu ý
     //Bắt buộc: Set sessionId vào toolGateway TRƯỚC khi compile
     // Điều này cho phép các trường hợp:
     // 1. User compile + User flash thủ công → FlashBoard lấy sessionId từ props
@@ -548,7 +550,8 @@ export function IDECode() {
               {selectedFile && (
                 <>
                   {/* Compile Arduino (chỉ hiện khi là file .ino) */}
-                  {selectedFile.endsWith(".ino") && (
+                  {(selectedFile.endsWith(".ino") ||
+                    selectedFile.endsWith(".c")) && (
                     <>
                       {/* Board Selector */}
                       <Select

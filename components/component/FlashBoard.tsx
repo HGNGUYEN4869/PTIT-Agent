@@ -12,6 +12,7 @@ import { ArduinoFlasher, SerialPort } from "@/lib/ArduinoFlasher";
 import { ESP32Flasher } from "@/lib/ESP32Flasher";
 import { motion } from "framer-motion";
 import { toolGateway } from "@/lib/toolGateway";
+import { FlashProgressToast } from "./FlashProgressToast.tsx";
 
 type FlashAllBoardsProps = {
   sessionId?: string; // Session ID từ compile step
@@ -138,15 +139,32 @@ export default function FlashAllBoards({
       throw new Error("Missing sessionId");
     }
 
+    const toastId = toast.info(
+      <FlashProgressToast
+        title="Đang tải firmware cho Arduino UNO"
+        message="Khởi tạo..."
+        percentage={0}
+      />,
+      { duration: Infinity }
+    );
+
     try {
       // 1. Download file .hex từ backend
-      toast.info("Đang tải firmware...");
+      // toast.info("Đang tải firmware...");
       const blob = await downloadUnoFirmware(sessionId);
       const hexContent = await blob.text();
 
       // 2. Tạo Arduino Flasher với progress callback
       const flasher = new ArduinoFlasher(port, (progress) => {
-        toast.info(`${progress.message} (${progress.percentage}%)`);
+        // toast.info(`${progress.message} (${progress.percentage}%)`);
+        toast(
+          <FlashProgressToast
+            title="Đang nạp firmware"
+            message={progress.message}
+            percentage={progress.percentage}
+          />,
+          { id: toastId }
+        );
       });
 
       // 3. Nạp code với callback khi cần nhấn nút reset
@@ -169,7 +187,11 @@ export default function FlashAllBoards({
 
       await Promise.race([flashPromise, timeoutPromise]);
 
-      toast.success("Nạp code thành công! Code đang chạy trên Arduino.");
+      // toast.success("Nạp code thành công! Code đang chạy trên Arduino.",
+      toast.success("Nạp code thành công! Code đang chạy trên Arduino.", {
+        id: toastId,
+        duration: 1000,
+      });
 
       // 5. Callback để IDECode biết flash xong và có thể mở Serial Monitor
       if (onFlashComplete) {
@@ -184,7 +206,11 @@ export default function FlashAllBoards({
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       // console.error("Flash UNO error:", err);
-      toast.error(`Lỗi nạp code: ${err.message || String(err)}`);
+      // toast.error(`Lỗi nạp code: ${err.message || String(err)}`);
+      toast.error(`Lỗi nạp code: ${err.message || String(err)}`, {
+        id: toastId,
+        duration: 1000,
+      });
       throw error;
     }
   }
@@ -196,9 +222,18 @@ export default function FlashAllBoards({
       throw new Error("Missing sessionId");
     }
 
+    const toastId = toast.info(
+      <FlashProgressToast
+        title="Đang tải firmware cho ESP32/ESP8266"
+        message="Khởi tạo..."
+        percentage={0}
+      />,
+      { duration: Infinity }
+    );
+
     try {
       // 1. Download firmware binary từ backend
-      toast.info("Đang tải firmware cho ESP32/ESP8266...");
+      // toast.info("Đang tải firmware cho ESP32/ESP8266...");
       const blob = await downloadEsp32Firmware(sessionId);
       const binData = await blob.arrayBuffer();
 
@@ -213,7 +248,15 @@ export default function FlashAllBoards({
         // console.log(
         //   `ESP32/ESP8266 Progress: ${progress.percentage}% - ${progress.message}`
         // );
-        toast.info(`${progress.message} (${progress.percentage}%)`);
+        // toast.info(`${progress.message} (${progress.percentage}%)`);
+        toast(
+          <FlashProgressToast
+            title="Đang nạp firmware"
+            message={progress.message}
+            percentage={progress.percentage}
+          />,
+          { id: toastId }
+        );
       });
 
       // 3. Nạp firmware vào ESP32/ESP8266
@@ -222,8 +265,13 @@ export default function FlashAllBoards({
       // FlashOffset sẽ tự động được xử lý trong ESP32Flasher dựa vào chip detect
       await flasher.flash(binData); // Sử dụng default offset 0x0
 
+      // toast.success("Nạp code thành công! ESP32/ESP8266 đang chạy firmware mới.", {
       toast.success(
-        "Nạp code thành công! ESP32/ESP8266 đang chạy firmware mới."
+        "Nạp code thành công! ESP32/ESP8266 đang chạy firmware mới.",
+        {
+          id: toastId,
+          duration: 1000,
+        }
       );
 
       // 4. Callback để IDECode biết flash xong
@@ -242,20 +290,30 @@ export default function FlashAllBoards({
       if (errorMsg.includes("Failed to communicate with the flash chip")) {
         ESP32Flasher.showFlashChipTroubleshooting();
       } else if (errorMsg.includes("No serial data received")) {
+        // toast.error("Không nhận được dữ liệu từ ESP!", {
+        //   duration: 10000,
+        // });
         toast.error("Không nhận được dữ liệu từ ESP!", {
-          duration: 10000,
+          id: toastId,
+          duration: 1000,
         });
         setTimeout(() => {
+          toast.dismiss();
           toast.info("Hãy vào bootloader mode thủ công và thử lại", {
             duration: 10000,
           });
         }, 1000);
       } else {
-        toast.error(`Lỗi nạp ESP32/ESP8266: ${errorMsg.substring(0, 100)}`);
+        // toast.error(`Lỗi nạp ESP32/ESP8266: ${errorMsg.substring(0, 100)}`);
+        toast.error(`Lỗi nạp ESP32/ESP8266: ${errorMsg.substring(0, 100)}`, {
+          id: toastId,
+          duration: 1000,
+        });
       }
 
       throw error;
     } finally {
+      toast.dismiss();
       // QUAN TRỌNG: Đóng port để giải phóng khi lỗi hoặc thành công
       try {
         // Release reader/writer nếu đang locked

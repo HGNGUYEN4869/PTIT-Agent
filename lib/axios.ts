@@ -2,13 +2,20 @@
 
 import axios from "axios";
 
-export const api = axios.create({
+export const ragApi = axios.create({
   // baseURL: "http://172.16.6.91:2009",
   baseURL: "http://172.16.5.10:2004",
   // baseURL: "http://localhost:8000",
   headers: {
     accept: "application/json",
     "Content-Type": "application/json",
+  },
+});
+export const stuCardApi = axios.create({
+  baseURL: "http://172.16.5.10:3333",
+  headers: {
+    accept: "application/json",
+    "Content-Type": "multipart/form-data",
   },
 });
 export const db = axios.create({

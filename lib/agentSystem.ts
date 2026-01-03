@@ -25,9 +25,6 @@ export type {
 
 // ============= HELPER EXPORTS =============
 
-// Serial Port Manager - Quản lý Serial Port connections
-// export { SerialPortManager } from "./serialPortManager";
-
 // Serial API Helpers - Utilities cho serial operations
 export * as SerialAPI from "./serialAPI";
 

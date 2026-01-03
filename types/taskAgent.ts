@@ -22,13 +22,14 @@ export type ToolName =
  * 1. Answer + Tool: Agent returns answer + toolName + params → FE executes tool + sends TOOL_RESULT
  * 2. Answer only: Agent returns answer without toolName → FE just displays answer (no tool execution)
  *
- * ✅ taskId removed - use sessionId for tracking instead
+ * taskId removed - use sessionId for tracking instead
  */
 export interface AgentTask {
   sessionId: string; // Phiên làm việc
   timestamp?: number; // Thời gian tạo (milliseconds)
   answer: string; // Câu trả lời/giải thích của Agent (bắt buộc)
   toolName?: ToolName; // Tên tool cần thực hiện (optional - nếu không có thì không cần gửi TOOL_RESULT)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params?: Record<string, any>; // Tham số của tool (optional)
   priority?: number; // Mức độ ưu tiên (1-10, mặc định 5)
   timeout?: number; // Timeout (milliseconds, mặc định 30000)
@@ -49,11 +50,12 @@ export interface UserQuery {
  * Frontend sends this via WebSocket after executing a tool
  * Unified format: error info merged into result.message + result object
  *
- * ✅ taskId removed - use sessionId for tracking instead
+ * taskId removed - use sessionId for tracking instead
  */
 export interface ToolResult {
   sessionId: string; // Phiên làm việc (use for tracking instead of taskId)
   status: "success" | "error" | "timeout"; // Trạng thái thực thi
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   result?: Record<string, any>; // Kết quả của tool - error/success/timeout info merged here
   // Chú ý: Lỗi sẽ nằm trong result.message hoặc result.code/result.error
 }
@@ -69,11 +71,12 @@ export interface WebSocketMessage {
 /**
  * Internal queue item (deprecated - no longer used)
  * Kept for backward compatibility only
- * ✅ taskId removed - use sessionId for tracking
+ * taskId removed - use sessionId for tracking
  */
 export interface QueueItem {
   sessionId: string;
   toolName?: ToolName;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params?: Record<string, any>;
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
   result?: ToolResult;

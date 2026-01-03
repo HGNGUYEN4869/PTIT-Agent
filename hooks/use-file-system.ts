@@ -3,10 +3,8 @@
 import { useState, useCallback } from "react";
 import {
   selectDirectory,
-  createFile,
   readFile,
   updateFile,
-  listFiles,
   listFilesRecursive,
   listDirectoryEntries,
   deleteFile,

@@ -165,6 +165,11 @@ textarea::-webkit-scrollbar {
   background: #1e1e1e;
   border-radius: 4px;
 }
+
+.bg-scrollbar::-webkit-scrollbar-track{
+  background: #1e1e1e;
+}
+
 .none-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }

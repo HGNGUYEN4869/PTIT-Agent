@@ -15,19 +15,22 @@ export interface SerialPortInfo {
  */
 export async function listSerialPorts(): Promise<SerialPortInfo[]> {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!(navigator as any).serial) {
-      throw new Error('Web Serial API not supported in this browser');
+      throw new Error("Web Serial API not supported in this browser");
     }
 
     // Get all ports user has previously granted permission to
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ports = await (navigator as any).serial.getPorts();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const portList: SerialPortInfo[] = ports.map((port: any) => {
       const info = port.getInfo();
       return {
         name: info.usbProductId
           ? `COM (USB) - VID:${info.usbVendorId} PID:${info.usbProductId}`
-          : 'Unknown Serial Port',
+          : "Unknown Serial Port",
         productId: info.usbProductId,
         vendorId: info.usbVendorId,
       };
@@ -48,6 +51,7 @@ export async function listSerialPorts(): Promise<SerialPortInfo[]> {
  * @returns String containing serial data received
  */
 export async function readSerialMonitor(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   port: any,
   duration: number = 5000,
   baudRate: number = 115200
@@ -57,7 +61,8 @@ export async function readSerialMonitor(
 
   try {
     // If port is a number, get it from list of available ports
-    if (typeof port === 'number') {
+    if (typeof port === "number") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ports = await (navigator as any).serial.getPorts();
       selectedPort = ports[port];
 
@@ -72,7 +77,7 @@ export async function readSerialMonitor(
     }
 
     reader = selectedPort.readable.getReader();
-    let data = '';
+    let data = "";
     let timedOut = false;
 
     // Read data with timeout
@@ -82,7 +87,7 @@ export async function readSerialMonitor(
           const { value, done } = await reader!.read();
 
           if (done) {
-            console.log('Serial port closed by device');
+            console.log("Serial port closed by device");
             break;
           }
 
@@ -90,7 +95,7 @@ export async function readSerialMonitor(
             // Decode Uint8Array to string
             const decoded = new TextDecoder().decode(value);
             data += decoded;
-            console.log('📊 Received:', decoded);
+            console.log("📊 Received:", decoded);
           }
         }
       } finally {
@@ -114,10 +119,10 @@ export async function readSerialMonitor(
     try {
       await selectedPort.close();
     } catch (closeError) {
-      console.warn('Port already closed:', closeError);
+      console.warn("Port already closed:", closeError);
     }
 
-    return data || '(No data received)';
+    return data || "(No data received)";
   } catch (error) {
     // Clean up on error
     if (reader) {
@@ -140,14 +145,16 @@ export async function readSerialMonitor(
 
 /**
  * Request permission and get a serial port from user
- * This will show browser's port selection dialog
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function requestSerialPort(): Promise<any> {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!(navigator as any).serial) {
-      throw new Error('Web Serial API not supported in this browser');
+      throw new Error("Web Serial API not supported in this browser");
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const port = await (navigator as any).serial.requestPort();
     return port;
   } catch (error) {
@@ -159,13 +166,14 @@ export async function requestSerialPort(): Promise<any> {
  * Write data to a serial port
  */
 export async function writeToSerialPort(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   port: any,
   data: string | Uint8Array,
   baudRate: number = 115200
 ): Promise<void> {
   try {
     if (!port) {
-      throw new Error('Serial port not available');
+      throw new Error("Serial port not available");
     }
 
     // Open port if not already open
@@ -176,7 +184,7 @@ export async function writeToSerialPort(
     const writer = port.writable.getWriter();
 
     try {
-      if (typeof data === 'string') {
+      if (typeof data === "string") {
         await writer.write(new TextEncoder().encode(data));
       } else {
         await writer.write(data);
@@ -193,12 +201,13 @@ export async function writeToSerialPort(
  * Open a serial port with specified baud rate
  */
 export async function openSerialPort(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   port: any,
   baudRate: number = 115200
 ): Promise<void> {
   try {
     if (!port) {
-      throw new Error('Serial port not available');
+      throw new Error("Serial port not available");
     }
 
     if (!port.readable || !port.writable) {
@@ -212,6 +221,7 @@ export async function openSerialPort(
 /**
  * Close a serial port
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function closeSerialPort(port: any): Promise<void> {
   try {
     if (port && (port.readable || port.writable)) {

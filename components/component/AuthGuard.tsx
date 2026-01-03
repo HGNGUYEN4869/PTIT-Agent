@@ -44,6 +44,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
               userId: result.userId,
               email: result.email,
               username: result.username,
+              stuId: result.stuId || "",
+              citizenId: result.citizenId || "",
             })
           );
         } else {

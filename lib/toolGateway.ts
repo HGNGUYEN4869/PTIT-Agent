@@ -4,6 +4,8 @@ import * as SerialAPI from "./serialAPI";
 import { AgentTask, ToolResult } from "@/types/taskAgent";
 import { compileArduino } from "@/app/api/arduinoCompile";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 export class ToolGateway extends EventEmitter {
   private lastTaskResult: ToolResult | null = null; // Store last task result
   private cachedDirHandle: any = null; // Cached directory handle from Redux
@@ -104,7 +106,7 @@ export class ToolGateway extends EventEmitter {
       return;
     }
 
-    const { sessionId, toolName, params } = task;
+    const { sessionId, toolName } = task;
 
     // === CASE 1: Answer only (không có toolName) ===
     if (!toolName) {
@@ -163,7 +165,7 @@ export class ToolGateway extends EventEmitter {
           break;
 
         case "TOOL_TERMINAL_READ":
-          result = await this.handleTerminalRead(params, sessionId);
+          result = await this.handleTerminalRead();
           break;
 
         case "TOOL_SERIAL_READ":
@@ -288,7 +290,8 @@ export class ToolGateway extends EventEmitter {
   }
 
   private async handleUpdateFile(params: any): Promise<any> {
-    let { fileName, content } = params || {}; // Handle params = undefined
+    const { fileName: initialFileName, content } = params || {}; // Handle params = undefined
+    let fileName = initialFileName;
     const dirHandle = this.cachedDirHandle;
 
     try {
@@ -368,7 +371,9 @@ export class ToolGateway extends EventEmitter {
   }
 
   private async handleCompileArduino(params: any): Promise<any> {
-    let { fileName, board = "arduino:avr:uno" } = params || {};
+    const { fileName: initialFileName, board = "arduino:avr:uno" } =
+      params || {};
+    let fileName = initialFileName;
 
     try {
       // Fallback: Nếu fileName empty hoặc không có → dùng cachedSelectedFile
@@ -508,8 +513,6 @@ export class ToolGateway extends EventEmitter {
   }
 
   private async handleTerminalRead(
-    params: any,
-    taskSessionId: string
   ): Promise<any> {
     try {
       // Return logs already collected by Terminal during compile
@@ -537,7 +540,8 @@ export class ToolGateway extends EventEmitter {
   }
 
   private async handleSerialRead(params: any): Promise<any> {
-    let { port, baudRate, timeout = 10000 } = params;
+    // eslint-disable-next-line prefer-const
+    let { port, baudRate, timeout } = params;
 
     try {
       // FALLBACK Port: agent param → currentSerialPort → error

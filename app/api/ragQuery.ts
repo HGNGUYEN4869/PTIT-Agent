@@ -1,8 +1,8 @@
 import { ApiResponse, ragResponse } from "@/types/common";
-import { api } from "../../lib/axios";
+import { ragApi } from "../../lib/axios";
 
 export async function ragQuery(query: string):Promise<ApiResponse<ragResponse>> {
-  const res = await api.post(
+  const res = await ragApi.post(
     "/rag/query",
     { query: query },
     {
