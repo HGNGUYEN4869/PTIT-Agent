@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { verifyStudentCard } from "@/app/api/stuCard";
 import { FIELD_LABELS } from "@/types/common";
+import { CardStudentResponse } from "@/types/cardStudent";
 
 interface StudentCardUploadProps {
   onSuccess: (cardImage: string) => void;
@@ -34,15 +35,15 @@ export default function StudentCardUpload({
   onSuccess,
   onBack,
 }: StudentCardUploadProps) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [preview, setPreview] = useState<string | null>(null);
-  const [verified, setVerified] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [cardData, setCardData] = useState<any>(null);
+  const [verified, setVerified] = useState<boolean>(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
+  const [cardData, setCardData] = useState<CardStudentResponse | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
 
   const validateAndProcessImage = async (file: File) => {
     // Validate file type
@@ -149,6 +150,7 @@ export default function StudentCardUpload({
         };
       }
     } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const err = error as any;
       console.error("Full error:", err);
 

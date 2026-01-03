@@ -26,6 +26,7 @@ const IDETerminal = ({ sessionId }: IDETerminalProps) => {
 
   // Subscribe event từ ToolGateway khi Agent execute compile
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleCompileStarted = (data: any) => {
       setIsAgentCompile(true); // ← Agent compile
       setWsSessionId(data.sessionId); // Update ws URL động

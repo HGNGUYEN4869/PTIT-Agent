@@ -12,7 +12,6 @@ export const ragApi = axios.create({
   },
 });
 export const stuCardApi = axios.create({
-  // baseURL: "http://172.16.6.91:2009",
   baseURL: "http://172.16.5.10:3333",
   headers: {
     accept: "application/json",

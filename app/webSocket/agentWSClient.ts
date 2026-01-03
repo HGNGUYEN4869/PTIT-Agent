@@ -10,6 +10,7 @@ import {
   AgentTask,
   UserQuery,
   ToolResult,
+  ErrorPayload,
 } from "./types";
 
 const DEFAULT_AGENT_WS_URL =
@@ -29,6 +30,7 @@ export class AgentWebSocketClient {
   private isManuallyDisconnected = false;
 
   // Event listeners
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private eventListeners: Map<WebSocketEventType, Set<EventCallback<any>>> =
     new Map();
 
@@ -43,7 +45,7 @@ export class AgentWebSocketClient {
     return new Promise((resolve) => {
       try {
         if (this.ws?.readyState === WebSocket.OPEN) {
-          console.log("⚠️ Already connected");
+          console.log("Already connected");
           resolve(true);
           return;
         }
@@ -51,14 +53,15 @@ export class AgentWebSocketClient {
         this.sessionId = sessionId;
         const wsUrl = `${this.url}?sessionId=${sessionId}`;
 
-        console.log(`🔌 Connecting to ${wsUrl}...`);
+        console.log(`Connecting to ${wsUrl}...`);
 
         this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {
-          console.log(`✅ WebSocket connected: sessionId=${sessionId}`);
+          console.log(`WebSocket connected: sessionId=${sessionId}`);
           this.reconnectAttempts = 0;
           this.isManuallyDisconnected = false;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           this.emit("CONNECT", undefined as any);
           resolve(true);
         };
@@ -66,7 +69,7 @@ export class AgentWebSocketClient {
         this.ws.onmessage = (event) => {
           try {
             const message: WebSocketMessage = JSON.parse(event.data);
-            console.log(`📨 Received: ${message.type}`);
+            console.log(`Received: ${message.type}`);
 
             // Route message to specific handlers
             if (message.type === "AGENT_TASK") {
@@ -75,21 +78,21 @@ export class AgentWebSocketClient {
               this.emit("TOOL_RESULT", message.data as ToolResult);
             }
           } catch (error) {
-            console.error("❌ Failed to parse message:", error);
+            console.error("Failed to parse message:", error);
           }
         };
 
         this.ws.onerror = (error) => {
-          console.error("❌ WebSocket error:", error);
+          console.error("WebSocket error:", error);
           this.emit("ERROR", {
             code: "WS_ERROR",
             message: "WebSocket connection error",
-          } as any);
+          } as ErrorPayload);
           resolve(false);
         };
 
         this.ws.onclose = () => {
-          console.log("📤 WebSocket disconnected");
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           this.emit("DISCONNECT", undefined as any);
 
           // Auto-reconnect if not manually disconnected
@@ -98,7 +101,7 @@ export class AgentWebSocketClient {
           }
         };
       } catch (error) {
-        console.error("❌ Failed to connect:", error);
+        console.error("Failed to connect:", error);
         resolve(false);
       }
     });
@@ -119,9 +122,10 @@ export class AgentWebSocketClient {
    * Send USER_QUERY to Agent
    * Query bao gồm câu hỏi + context 6 tin nhắn gần nhất
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sendUserQuery(query: string, result?: Record<string, any>): boolean {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.error("❌ WebSocket not connected");
+      console.error("WebSocket not connected");
       return false;
     }
 
@@ -138,10 +142,10 @@ export class AgentWebSocketClient {
 
     try {
       this.ws.send(JSON.stringify(message));
-      console.log(`📤 Sent USER_QUERY: ${query.substring(0, 50)}...`);
+      console.log(`Sent USER_QUERY: ${query.substring(0, 50)}...`);
       return true;
     } catch (error) {
-      console.error("❌ Failed to send USER_QUERY:", error);
+      console.error("Failed to send USER_QUERY:", error);
       return false;
     }
   }
@@ -149,6 +153,7 @@ export class AgentWebSocketClient {
   /**
    * Send CHAT_QUERY to Agent (deprecated - use sendUserQuery instead)
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sendChatQuery(query: string, result?: Record<string, any>): boolean {
     return this.sendUserQuery(query, result);
   }
@@ -156,17 +161,18 @@ export class AgentWebSocketClient {
   /**
    * Send TOOL_RESULT to Agent
    * Unified format: error/success/data merged vào result
-   * ✅ taskId removed - use sessionId for tracking
-   * ✅ query: Lịch sử 6 tin nhắn gần nhất (context) - optional
+   * taskId removed - use sessionId for tracking
+   * query: Lịch sử 6 tin nhắn gần nhất (context) - optional
    */
   sendToolResult(
     sessionId: string,
     status: "success" | "error" | "timeout",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     result?: Record<string, any>,
     query?: string
   ): boolean {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.error("❌ WebSocket not connected");
+      console.error("WebSocket not connected");
       return false;
     }
 
@@ -175,7 +181,7 @@ export class AgentWebSocketClient {
       sessionId,
       status,
       result, // Chứa: data + message/error info
-      query, // ✅ Lịch sử conversation - optional
+      query, // Lịch sử conversation - optional
     };
 
     const message: WebSocketMessage = {
@@ -185,13 +191,11 @@ export class AgentWebSocketClient {
 
     try {
       this.ws.send(JSON.stringify(message));
-      console.log(
-        `📤 Sent TOOL_RESULT: sessionId=${sessionId}, status=${status}`
-      );
+      console.log(`Sent TOOL_RESULT: sessionId=${sessionId}, status=${status}`);
       console.log(JSON.stringify(message));
       return true;
     } catch (error) {
-      console.error("❌ Failed to send TOOL_RESULT:", error);
+      console.error("Failed to send TOOL_RESULT:", error);
       return false;
     }
   }
@@ -256,7 +260,7 @@ export class AgentWebSocketClient {
         try {
           callback(data);
         } catch (error) {
-          console.error(`❌ Error in event listener for ${event}:`, error);
+          console.error(`Error in event listener for ${event}:`, error);
         }
       });
     }
@@ -267,7 +271,7 @@ export class AgentWebSocketClient {
    */
   private attemptReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error("❌ Max reconnect attempts reached, giving up");
+      console.error("Max reconnect attempts reached, giving up");
       return;
     }
 
@@ -275,7 +279,7 @@ export class AgentWebSocketClient {
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
 
     console.log(
-      `⏳ Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms...`
+      `Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms...`
     );
 
     setTimeout(() => {

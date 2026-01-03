@@ -9,6 +9,7 @@ export interface AgentTask {
   timestamp?: number;
   answer: string;
   toolName?: string; // if no tool, just display answer
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params?: Record<string, any>;
   status?: string;
   priority?: number;
@@ -20,13 +21,14 @@ export interface AgentTask {
  * TOOL_RESULT - FE → Agent
  * Unified format: tất cả thông tin (error/success/data) nằm trong result
  * status + result.message/result.code = đủ để hiểu kết quả
- * ✅ query: Lịch sử 6 tin nhắn gần nhất (context) - giúp Agent hiểu ngữ cảnh
+ * query: Lịch sử 6 tin nhắn gần nhất (context) - giúp Agent hiểu ngữ cảnh
  */
 export interface ToolResult {
   sessionId: string;
   status: "success" | "error" | "timeout";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   result?: Record<string, any>; // Chứa tất cả: data, error info, message, logs
-  query?: string; // ✅ Lịch sử conversation (6 tin nhắn cuối) - optional
+  query?: string; // Lịch sử conversation (6 tin nhắn cuối) - optional
 }
 
 /**
@@ -36,7 +38,8 @@ export interface ToolResult {
 export interface UserQuery {
   sessionId: string;
   query: string; // Câu hỏi kèm context 6 tin nhắn gần nhất
-  result?: Record<string, any>;// previous tool results or context
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  result?: Record<string, any>; // previous tool results or context
 }
 
 export interface ErrorPayload {

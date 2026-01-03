@@ -131,6 +131,7 @@ export function IDECode() {
 
   // Listen for file_updated event from toolGateway
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handler = async (event: any) => {
       const { fileName, toolName } = event;
 
@@ -296,6 +297,7 @@ export function IDECode() {
     // Lưu FULL PATH file vào ToolGateway để Agent có thể compile
     if (typeof window !== "undefined") {
       // Gửi full path (VD: "projects/led.ino") không extract chỉ filename
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).setSelectedFileFromIDE?.(fileName);
       console.log(`Selected file saved to ToolGateway: ${fileName}`);
     }

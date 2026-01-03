@@ -50,6 +50,7 @@ export default function FaceRecognition({
   const [recognizing, setRecognizing] = useState(false);
   const [matched, setMatched] = useState(false);
   const [showFailureDialog, setShowFailureDialog] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [failureData, setFailureData] = useState<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -96,6 +97,7 @@ export default function FaceRecognition({
         };
       }
     } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const err = error as any;
       if (err.name === "NotAllowedError") {
         toast.error("Bạn đã từ chối quyền truy cập camera");
@@ -373,12 +375,14 @@ export default function FaceRecognition({
 
         // Clean up timeout khi success
         const originalResolve = resolve;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolve = (value: any) => {
           clearTimeout(timeout);
           originalResolve(value);
         };
 
         const originalReject = reject;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         reject = (reason: any) => {
           clearTimeout(timeout);
           originalReject(reason);

@@ -11,7 +11,10 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../../store/store";
-import { clearChatState, triggerRefreshHistory } from "../../../store/chatSlice";
+import {
+  clearChatState,
+  triggerRefreshHistory,
+} from "../../../store/chatSlice";
 import { addMessage } from "../../api/messageFetch";
 import { UUID } from "crypto";
 import { getDetailChat } from "@/app/api/chatFetch";
@@ -234,6 +237,7 @@ export default function ChatPage() {
         // Route task to toolGateway for execution (direct execute, no queue)
         const taskWithCorrectType = {
           ...currentTask,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           toolName: currentTask.toolName as any,
         };
         toolGateway.receiveAgentTask(taskWithCorrectType);
