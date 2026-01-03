@@ -1,10 +1,10 @@
-import { ragApi } from "../../lib/axios";
+import { stuCardApi } from "../../lib/axios";
 
-export async function uploadRagFile(file: File) {
+export async function verifyStudentCard(file: File) {
   const formData = new FormData();
   if (file) formData.append("file", file);
 
-  const res = await ragApi.post("/rag/upload", formData, {
+  const res = await stuCardApi.post("/gui_anh", formData, {
     headers: {
       accept: "application/json",
       "Content-Type": "multipart/form-data",

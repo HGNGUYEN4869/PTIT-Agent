@@ -1,40 +1,6 @@
 import { db } from "@/lib/axios";
+import { AuthResponse, CheckAccountRequest, CheckAccountResponse, CheckAuthResponse, LoginRequest, RegisterRequest, RegisterResponse } from "@/types/auth";
 import { toast } from "sonner";
-
-// Types
-export interface RegisterRequest {
-  email: string;
-  username: string;
-  password: string;
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface AuthResponse {
-  message: string;
-  userId: string;
-  email: string;
-  username: string;
-  accessToken?: string;
-  refreshToken?: string;
-}
-
-export interface RegisterResponse {
-  message: string;
-  userId: string;
-  username: string;
-  email: string;
-}
-
-export interface CheckAuthResponse {
-  isAuthenticated: boolean;
-  userId?: string;
-  username?: string;
-  email?: string;
-}
 
 // API Functions
 
@@ -46,6 +12,21 @@ export const register = async (
 ): Promise<RegisterResponse> => {
   const response = await db.post<RegisterResponse>(
     "/agent/auth/register",
+    data,
+    {
+      withCredentials: true, // Quan trọng: Gửi và nhận cookies
+    }
+  );
+  return response.data;
+};
+/**
+ * Check tài khoản tồn tại
+ */
+export const checkAccount = async (
+  data: CheckAccountRequest
+): Promise<CheckAccountResponse> => {
+  const response = await db.post<CheckAccountResponse>(
+    "/agent/auth/checkAccount",
     data,
     {
       withCredentials: true, // Quan trọng: Gửi và nhận cookies
@@ -107,6 +88,8 @@ export const checkAuth = async (): Promise<CheckAuthResponse> => {
       userId: response.data.userId,
       username: response.data.username,
       email: response.data.email,
+      stuId: response.data.stuId,
+      citizenId: response.data.citizenId,
     };
   } catch (error) {
     // Nếu lỗi (401, 403), user chưa đăng nhập hoặc token hết hạn

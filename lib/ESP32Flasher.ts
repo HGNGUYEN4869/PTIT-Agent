@@ -196,9 +196,9 @@ export class ESP32Flasher {
       if (this.transport) {
         try {
           await this.transport.disconnect();
-          console.log("✅ Transport disconnected, port đã được giải phóng");
+          console.log("Transport disconnected, port đã được giải phóng");
         } catch (disconnectErr) {
-          console.warn("⚠️ Không thể disconnect transport:", disconnectErr);
+          console.warn("Không thể disconnect transport:", disconnectErr);
         }
       }
     }
@@ -218,6 +218,7 @@ export class ESP32Flasher {
    * Hiển thị hướng dẫn khắc phục lỗi flash chip
    */
   static showFlashChipTroubleshooting(): void {
+    toast.dismiss();
     toast.error("Không kết nối được với chip flash!", {
       duration: 15000,
     });

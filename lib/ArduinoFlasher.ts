@@ -296,7 +296,8 @@ export class ArduinoFlasher {
           // Nếu port đang mở, đóng lại trước
           try {
             if (this.port.readable || this.port.writable) {
-              await this.port.close();
+              await this.port.close().catch(() => {});
+              await new Promise((r) => setTimeout(r, 300));
               console.log("Port closed before 1200bps reset");
             }
           } catch {}
@@ -402,6 +403,7 @@ export class ArduinoFlasher {
           // QUAN TRỌNG: Release lock TRƯỚC cancel/close
           if (this.reader) {
             try {
+              await this.reader.cancel();
               this.reader.releaseLock();
             } catch {}
             this.reader = undefined;

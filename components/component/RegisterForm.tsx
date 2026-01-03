@@ -26,17 +26,34 @@ import { setAuth } from "@/store/authSlice";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 //  Schema validation với zod
 const loginSchema = z.object({
   username: z.string().min(3, "Username phải có ít nhất 3 ký tự"),
-  email: z.string().email("Email phải có dạng @ptit.edu.vn"),
+  email: z
+    .string()
+    .email("Email không hợp lệ")
+    .refine((email) => email.endsWith("@stu.ptit.edu.vn"), {
+      message: "Email phải thuộc domain @stu.ptit.edu.vn",
+    }),
   password: z.string().min(6, "Mật khẩu phải ít nhất 6 ký tự"),
+  stuId: z.string(),
+  citizenId: z.string(),
 });
 
 type RegisterFormValues = z.infer<typeof loginSchema>;
 
-export default function RegisterForm() {
+interface RegisterFormProps {
+  preFilledData?: {
+    username: string | null;
+    email?: string | null;
+    stuId?: string | null;
+    citizenId?: string | null;
+  };
+}
+
+export default function RegisterForm({ preFilledData }: RegisterFormProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const dispatch = useDispatch();
   const router = useRouter();
@@ -47,9 +64,11 @@ export default function RegisterForm() {
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
-      email: "",
+      username: preFilledData?.username ?? "",
+      email: preFilledData?.email ?? "",
       password: "",
+      stuId: preFilledData?.stuId ?? "",
+      citizenId: preFilledData?.citizenId ?? "",
     },
   });
 
@@ -63,9 +82,12 @@ export default function RegisterForm() {
             userId: response.userId,
             username: response.username,
             email: response.email,
+            stuId: response.stuId,
+            citizenId: response.citizenId,
           })
         );
         setLoading(false);
+        toast.success("Đăng ký thành công!");
         router.push("/");
       }
     } catch (error) {
@@ -111,7 +133,15 @@ export default function RegisterForm() {
                       <UserPlus className="w-4 h-4" /> Username
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="Username" {...field} />
+                      <Input
+                        placeholder="Username"
+                        {...field}
+                        disabled={!!preFilledData?.username}
+                        className={cn(
+                          !!preFilledData?.username &&
+                            "cursor-not-allowed opacity-50 pointer-events-none"
+                        )}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -128,7 +158,15 @@ export default function RegisterForm() {
                       <Mail className="w-4 h-4" /> Email
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="Email" {...field} />
+                      <Input
+                        placeholder="Email"
+                        {...field}
+                        disabled={!!preFilledData?.email}
+                        className={cn(
+                          !!preFilledData?.email &&
+                            "cursor-not-allowed opacity-50 pointer-events-none"
+                        )}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -155,6 +193,23 @@ export default function RegisterForm() {
                   </FormItem>
                 )}
               />
+
+              {/* Hidden fields - Được auto-fill từ FaceRecognition */}
+              {preFilledData?.stuId && (
+                <FormField
+                  control={form.control}
+                  name="stuId"
+                  render={({ field }) => <input type="hidden" {...field} />}
+                />
+              )}
+
+              {preFilledData?.citizenId && (
+                <FormField
+                  control={form.control}
+                  name="citizenId"
+                  render={({ field }) => <input type="hidden" {...field} />}
+                />
+              )}
 
               {/* Button */}
               <Button type="submit" className="w-full" disabled={loading}>

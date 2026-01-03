@@ -28,7 +28,12 @@ import { toast } from "sonner";
 
 //  Schema validation với zod
 const loginSchema = z.object({
-  email: z.string().email("Email phải có dạng @ptit.edu.vn"),
+  email: z
+      .string()
+      .email("Email không hợp lệ")
+      .refine((email) => email.endsWith("@stu.ptit.edu.vn"), {
+        message: "Email phải thuộc domain @stu.ptit.edu.vn",
+      }),
   password: z.string().min(6, "Mật khẩu phải ít nhất 6 ký tự"),
 });
 
@@ -60,6 +65,8 @@ export default function LoginForm() {
             userId: response.userId,
             username: response.username,
             email: response.email,
+            stuId: response.stuId,
+            citizenId: response.citizenId,
           })
         );
         setLoading(false);

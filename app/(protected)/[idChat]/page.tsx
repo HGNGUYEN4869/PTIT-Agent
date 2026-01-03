@@ -33,7 +33,6 @@ export default function ChatPage() {
   const chat = useSelector((state: RootState) => state.chat);
   const dispatch = useDispatch();
   const sentFromRedux = useRef(false);
-  const [successUpload, setSuccessUpload] = useState<boolean>(false);
   const messageEndRef = useRef<HTMLDivElement>(null);
   const params = useParams(); //{ idChat : 'abc123' }
 
@@ -120,10 +119,7 @@ export default function ChatPage() {
         if (file) {
           const uploadRes = await uploadRagFile(file);
           fileId = uploadRes.data.file;
-          setSuccessUpload(true);
-          setTimeout(() => {
-            setSuccessUpload(false);
-          }, 2000);
+          toast.success("Upload file thành công");
         }
 
         if (text.trim() === "") {
@@ -373,14 +369,6 @@ export default function ChatPage() {
             isAgentMode ? "px-4" : "2xl:px-72 xl:px-44 lg:px-32 md:px-12 px-4"
           }`}
         >
-          {successUpload && (
-            <div className="absolute top-0 right-0">
-              <Alert>
-                <CheckCircle2Icon />
-                <AlertTitle>File upload thành công</AlertTitle>
-              </Alert>
-            </div>
-          )}
           <div className="flex flex-col w-full gap-4">
             {messages.map((m, index) => (
               <ChatMessage

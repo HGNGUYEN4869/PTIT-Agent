@@ -6,6 +6,8 @@ const initialState: AuthState = {
   userId: null,
   username: null,
   email: null,
+  stuId: null,
+  citizenId: null,
   loading: true, // Bắt đầu là true để check auth lần đầu
 };
 
@@ -15,12 +17,14 @@ const authSlice = createSlice({
   reducers: {
     setAuth(
       state,
-      action: PayloadAction<{ userId: string; email: string; username: string }>
+      action: PayloadAction<{ userId: string; email: string; username: string, stuId: string, citizenId:string }>
     ) {
       state.isAuthenticated = true;
       state.userId = action.payload.userId;
       state.email = action.payload.email;
       state.username = action.payload.username;
+      state.stuId = action.payload.stuId;
+      state.citizenId = action.payload.citizenId;
       state.loading = false;
     },
     clearAuth(state) {
@@ -28,6 +32,8 @@ const authSlice = createSlice({
       state.userId = null;
       state.username = null;
       state.email = null;
+      state.stuId = null;
+      state.citizenId = null;
       state.loading = false;
     },
     setLoading(state, action: PayloadAction<boolean>) {
