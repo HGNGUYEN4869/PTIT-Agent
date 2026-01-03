@@ -6,8 +6,6 @@ import { ChatInput } from "@/components/component/ChatInput";
 import { Message, MessageRole } from "@/types/message";
 import { uploadRagFile } from "../../api/uploadFile";
 import { ragQuery } from "../../api/ragQuery";
-import { CheckCircle2Icon } from "lucide-react";
-import { Alert, AlertTitle } from "@/components/ui/alert";
 import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../../store/store";
