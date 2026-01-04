@@ -41,7 +41,7 @@ const IDETerminal = ({ sessionId }: IDETerminalProps) => {
 
   // Kết nối vào WS với sessionId (có thể từ props hoặc từ Agent event)
   const wsUrl = wsSessionId
-    ? `ws://localhost:2005/ws/compile/${wsSessionId}`
+    ? `ws://ptit-agent-be-production.up.railway.app/ws/compile/${wsSessionId}`
     : null;
 
   const { logs, isClosed } = useWebSocketLogs(wsUrl);
