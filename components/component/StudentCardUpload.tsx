@@ -244,7 +244,7 @@ export default function StudentCardUpload({
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.5 }}
       >
-        <Card className="w-[500px] shadow-lg h-fit bg-transparent backdrop-blur-sm text-white">
+        <Card className="w-125 shadow-lg h-fit bg-transparent backdrop-blur-sm text-white">
           <CardHeader>
             <CardTitle className="text-center text-xl font-semibold">
               Xác Thực Thẻ Sinh Viên
@@ -387,6 +387,7 @@ export default function StudentCardUpload({
                     onClick={() => {
                       setPreview(null);
                       setVerified(false);
+                      setLoading(false);
                     }}
                     className="w-full"
                   >
@@ -449,7 +450,7 @@ export default function StudentCardUpload({
                       .map(([key, value], index) => (
                         <div
                           key={index}
-                          className="flex justify-between items-center pb-2 border-b border-slate-700"
+                          className="flex justify-start gap-0.5 items-center pb-2 border-b border-slate-700"
                         >
                           {/* Tên trường */}
                           <span className="text-slate-300">

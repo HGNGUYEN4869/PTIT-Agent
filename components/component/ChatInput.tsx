@@ -120,7 +120,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
       {/* Hiển thị tên file khi chọn */}
       {file && (
         <div className="flex items-center gap-2 px-2 py-1.5 text-sm border rounded-md text-muted-foreground bg-background">
-          <span className="truncate max-w-[50px]">{file.name}</span>
+          <span className="truncate max-w-12.5">{file.name}</span>
           <button
             type="button"
             onClick={() => setFile(undefined)}
@@ -138,7 +138,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         onChange={(e) => setInput(e.target.value)}
         disabled={disabled}
         // IMPORTANT: override padding/line-height mặc định component (dùng ! để chắc chắn)
-        className="flex-1 bg-background resize-none min-h-9 h-full p-2! leading-[18px]!"
+        className="flex-1 bg-background resize-none min-h-9 h-full p-2! leading-4.5!"
         onKeyDown={handleEnter}
         onInput={(e) => {
           const target = e.target as HTMLTextAreaElement;

@@ -254,13 +254,12 @@ export default function FaceRecognition({
               recognizingRef.current = false;
               console.log("Success Data:", message);
 
-              // Dừng camera
-              stopCamera();
               toast.success("Xác thực thành công!", {
                 id: TOAST_ID,
                 duration: 1500,
               });
-
+              // Dừng camera
+              stopCamera();
               // Chuyển sang RegisterForm - không cần userInfo từ WS
               setTimeout(() => {
                 onSuccess({
@@ -278,7 +277,7 @@ export default function FaceRecognition({
             if (message.type === "final" && !message.success) {
               setRecognizing(false);
               recognizingRef.current = false;
-
+              stopCamera();
               // Nếu payload null/undefined - đóng ws nhưng giữ camera bật để retry
               if (message.payload == null || message.payload == undefined) {
                 wsRef.current?.close();
@@ -288,8 +287,6 @@ export default function FaceRecognition({
                 });
                 return; // Không reject - cho user retry
               }
-
-              stopCamera();
 
               const handleCheckAccount = async (): Promise<boolean> => {
                 const requestCheckAccount = {
@@ -314,6 +311,7 @@ export default function FaceRecognition({
                   duration: 1500,
                 });
                 // Chuyển sang RegisterForm - không cần userInfo từ WS
+                stopCamera();
                 setTimeout(() => {
                   onSuccess({
                     username: message?.payload?.Ho_ten || "",
@@ -396,6 +394,8 @@ export default function FaceRecognition({
     } finally {
       toast.dismiss();
     }
+    // Dừng camera
+    stopCamera();
   };
 
   const handleCancel = () => {
@@ -420,7 +420,7 @@ export default function FaceRecognition({
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5 }}
     >
-      <Card className="w-[500px] shadow-lg h-fit bg-transparent backdrop-blur-sm text-white">
+      <Card className="w-125 shadow-lg h-fit bg-transparent backdrop-blur-sm text-white">
         <CardHeader>
           <CardTitle className="text-center text-xl font-semibold">
             Xác Thực Khuôn Mặt
