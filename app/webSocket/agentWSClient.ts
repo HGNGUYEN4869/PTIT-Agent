@@ -142,7 +142,7 @@ export class AgentWebSocketClient {
 
     try {
       this.ws.send(JSON.stringify(message));
-      console.log(`Sent USER_QUERY: ${query.substring(0, 50)}...`);
+      console.log(`Sent USER_QUERY: ${JSON.stringify(message)}`);
       return true;
     } catch (error) {
       console.error("Failed to send USER_QUERY:", error);

@@ -21,6 +21,8 @@ export interface ragResponse {
   context_source: string;
 }
 
+export type LogLevel = "INFO" | "WARNING" | "SUCCESS" | "ERROR" | "DEFAULT";
+
 export const FIELD_LABELS: Record<string, string> = {
   Loai_the_dk: "Loại thẻ đăng ký",
   Ho_ten: "Họ tên",

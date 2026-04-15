@@ -2,6 +2,8 @@ import { useRef, useState, useEffect } from "react";
 import { Terminal } from "../ui/terminal";
 import { useWebSocketLogs } from "@/hooks/useWebSocketLogs";
 import { toolGateway } from "@/lib/toolGateway";
+import { getLogIcon } from "@/helper/getIcon";
+import { LogLevel } from "@/types/common";
 
 type IDETerminalProps = {
   sessionId: string;
@@ -77,26 +79,47 @@ const IDETerminal = ({ sessionId }: IDETerminalProps) => {
         className="w-full bg-transparent h-64 overflow-y-auto none-scrollbar -mr-8"
         ref={wsRef}
       >
-        {logs.map((log, i) => {
-          // Màu sắc theo level
-          const color =
-            log.level === "ERROR"
-              ? "text-red-500"
-              : log.level === "WARNING"
-              ? "text-yellow-500"
-              : log.level === "SUCCESS"
-              ? "text-green-500"
-              : "text-white";
+        {logs
+          .filter((log) => log.message?.trim() !== "")
+          .map((log, i) => {
+            // Màu sắc theo level
+            const color =
+              log.level === "ERROR"
+                ? "#ef4444"
+                : log.level === "WARNING"
+                  ? "#cba612"
+                  : log.level === "SUCCESS"
+                    ? "#1da850"
+                    : log.level === "INFO"
+                      ? "#5088ce" //INFO
+                      : "#b9bcc2"; // default
 
-          return (
-            <div key={i} className={`flex w-full overflow-hidden ${color}`}>
-              <span className="shrink-0 pr-2">❯</span>
-              <span className="whitespace-pre-wrap wrap-break-words flex-1 min-w-0">
-                {log.message.trim()}
-              </span>
-            </div>
-          );
-        })}
+            return (
+              <div
+                key={i}
+                className={`flex w-full overflow-hidden text-[${color}]`}
+              >
+                {log.level !== "DEFAULT" && (
+                  <div
+                    className={`rounded-full w-fit px-2 py-1 mr-2 bg-[${color}] text-white shrink-0`}
+                  >
+                    {log.timestamp}
+                  </div>
+                )}
+
+                <div className="w-full flex gap-1 items-start">
+                  {log.level !== "DEFAULT" && (
+                    <span className="shrink-0 mt-1">
+                      {getLogIcon(log.level as LogLevel)}
+                    </span>
+                  )}
+                  <span className="whitespace-pre-wrap wrap-break-words flex-1 min-w-0">
+                    {log.message.trim()}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
       </div>
     </Terminal>
   );

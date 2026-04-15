@@ -148,6 +148,7 @@ export function IDECode() {
             toast.success(`File update successfully`);
           }
           await loadFileList();
+          // await loadDirectoryEntries();
         } catch (error) {
           toast.error(`Failed to update file: ${error}`);
         }
@@ -558,7 +559,7 @@ export function IDECode() {
                         value={selectedBoard}
                         onValueChange={setSelectedBoard}
                       >
-                        <SelectTrigger className="w-[200px] h-9 bg-[#252525] border-[#444444] text-white text-xs">
+                        <SelectTrigger className="w-50 h-9 bg-[#252525] border-[#444444] text-white text-xs">
                           <SelectValue placeholder="Chọn board" />
                         </SelectTrigger>
                         <SelectContent>
